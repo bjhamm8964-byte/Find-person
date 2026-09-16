@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="styles.css?v=20260915-4">
+  <link rel="stylesheet" href="styles.css?v=20260916-8">
 </head>
 <body>
   <header class="topbar">
@@ -55,9 +55,13 @@
       <section id="dutyView" class="view hidden">
         <div class="duty-head">
           <div><p id="dateLabel" class="eyebrow"></p><h2 id="dutyTitle">今日值日</h2></div>
-          <select id="daySelect" aria-label="选择星期"></select>
+          <div class="duty-head-actions"><button id="dutyTeamButton" class="secondary-button compact-button" type="button">劳动委员</button><select id="daySelect" aria-label="选择星期"></select></div>
         </div>
         <p id="dutyWeekNotice" class="data-notice"></p>
+        <section class="duty-control-card">
+          <div id="commissionerStrip" class="commissioner-strip"></div>
+          <div id="dutyDebtList" class="duty-debt-list"></div>
+        </section>
         <div id="dutyList" class="duty-list"></div>
       </section>
 
@@ -67,7 +71,12 @@
       </section>
 
       <section id="whereView" class="view hidden">
-        <div class="section-heading"><div><p id="whereDate" class="eyebrow"></p><h2>全班去向</h2></div><button id="resetWhere" class="text-button" type="button">重置今日</button></div>
+        <div class="section-heading"><div><p id="whereDate" class="eyebrow"></p><h2>全班去向</h2></div><button id="resetWhere" class="text-button" type="button">非请假全部回班</button></div>
+        <section class="archive-card">
+          <label class="archive-toggle"><span><strong>自动留存每日统计</strong><small>状态跨日延续，直到你主动修改</small></span><input id="autoArchive" type="checkbox" checked><i aria-hidden="true"></i></label>
+          <p id="archiveStatus">正在读取留存记录…</p>
+          <div class="archive-actions"><button id="saveToday" class="secondary-button" type="button">保存今日</button><button id="openHistory" class="secondary-button" type="button">日后回溯</button><button id="exportHistory" class="primary-button" type="button">导出全部记录</button></div>
+        </section>
         <div id="whereSummary" class="where-summary"></div>
         <div id="whereGroups" class="where-groups"></div>
       </section>
@@ -88,8 +97,37 @@
       <section class="data-block"><h3>学生头像总库</h3><p>包含全班姓名、拼音和照片。可整包导入、备份或换机。</p><div class="data-actions"><label class="secondary-button file-button">导入总库<input id="studentFile" type="file" accept=".js,text/javascript,application/javascript"></label><button id="exportStudents" class="secondary-button" type="button">导出总库</button></div></section>
       <section class="data-block"><h3>每周值日 JS</h3><p id="dutyDataStatus">尚未导入</p><div class="data-actions"><label class="secondary-button file-button">替换值日<input id="dutyFile" type="file" accept=".js,text/javascript,application/javascript"></label><button id="exportDuty" class="secondary-button" type="button">导出当前</button></div></section>
       <section class="data-block"><h3>宿舍成员 JS</h3><p id="dormDataStatus">尚未导入</p><div class="data-actions"><label class="secondary-button file-button">替换宿舍<input id="dormFile" type="file" accept=".js,text/javascript,application/javascript"></label><button id="exportDorm" class="secondary-button" type="button">导出当前</button></div></section>
+      <section class="data-block"><h3>学生管理记录</h3><p id="managementDataStatus">第一印象、违纪与值日责任只保存在本机</p><div class="data-actions"><label class="secondary-button file-button">导入备份<input id="managementFile" type="file" accept=".js,text/javascript,application/javascript"></label><button id="exportManagement" class="secondary-button" type="button">导出备份</button></div></section>
       <button id="forgetData" class="text-button danger full" type="button">清除本机全部数据</button>
-      <p class="fineprint">三个数据包彼此独立。替换值日或宿舍不会改动学生照片。</p>
+      <p class="fineprint">各数据包彼此独立。替换值日、宿舍或管理记录不会改动学生照片。</p>
+    </form>
+  </dialog>
+
+  <dialog id="historyDialog" class="history-dialog">
+    <form method="dialog">
+      <div class="dialog-head"><h2>每日去向回溯</h2><button value="cancel" aria-label="关闭">×</button></div>
+      <label class="field-label">选择日期<select id="historyDay"></select></label>
+      <p id="historySummary" class="history-summary"></p>
+      <div id="historyRecords" class="history-records"></div>
+      <button id="historyExport" class="primary-button full-button" type="button">导出全部记录 CSV</button>
+    </form>
+  </dialog>
+
+  <dialog id="commissionerDialog" class="picker-dialog">
+    <form method="dialog">
+      <div class="dialog-head"><div><p class="eyebrow">岗位与姓名分开保存</p><h2>调整劳动委员</h2></div><button value="cancel" aria-label="关闭">×</button></div>
+      <div id="commissionerRoleButtons" class="role-picker"></div>
+      <div class="picker-search"><input id="commissionerSearch" type="search" autocomplete="off" placeholder="姓名 / 拼音 / 首字母"><button id="clearCommissioner" class="text-button danger" type="button">暂时空缺</button></div>
+      <div id="commissionerCandidates" class="candidate-grid"></div>
+    </form>
+  </dialog>
+
+  <dialog id="dutyActionDialog" class="picker-dialog">
+    <form method="dialog">
+      <div class="dialog-head"><div><p id="dutyActionEyebrow" class="eyebrow">值日处理</p><h2 id="dutyActionTitle">安排补位</h2></div><button value="cancel" aria-label="关闭">×</button></div>
+      <p id="dutyActionHint" class="action-hint"></p>
+      <div id="dutyActionCandidates" class="candidate-grid"></div>
+      <button id="saveDutyAction" class="primary-button full-button hidden" type="button">保存返工名单</button>
     </form>
   </dialog>
 
@@ -106,14 +144,42 @@
           <p id="personDorm"></p>
         </div>
       </div>
+      <section id="personManagement" class="person-management hidden" aria-label="学生管理摘要">
+        <div class="management-head"><div><small>全屏快速一览</small><h3 id="managementTitle">管理摘要</h3></div><button id="closeManagement" type="button" aria-label="关闭管理摘要">×</button></div>
+        <div id="managementSummaryView">
+          <div id="impressionSummary" class="impression-summary"></div>
+          <p id="managementNote" class="management-note"></p>
+          <div class="management-stats">
+            <div><strong id="leaveCount">0</strong><span>请假</span></div>
+            <div><strong id="awayCount">0</strong><span>离校</span></div>
+            <div><strong id="disciplineCount">0</strong><span>违纪</span></div>
+            <div><strong id="disciplineLevel">无</strong><span>最高程度</span></div>
+          </div>
+          <div class="advancement-placeholder"><span>升学可能性</span><strong id="advancementLevel">待段考数据</strong></div>
+          <p id="latestDiscipline" class="latest-discipline"></p>
+          <div class="management-actions"><button id="editImpression" class="secondary-button" type="button">第一印象</button><button id="addDiscipline" class="primary-button" type="button">登记违纪</button></div>
+        </div>
+        <div id="impressionEditor" class="management-editor hidden">
+          <p class="picker-title">第一印象 · 最多选 3 个</p>
+          <div id="impressionButtons" class="quick-picker impression-picker"></div>
+          <label class="compact-field">工作提示<input id="managementNoteInput" type="text" maxlength="40" placeholder="如：交代任务时说明完成时间"></label>
+          <div class="management-actions"><button id="cancelImpression" class="secondary-button" type="button">返回</button><button id="saveImpression" class="primary-button" type="button">保存</button></div>
+        </div>
+        <div id="disciplineEditor" class="management-editor hidden">
+          <p class="picker-title">违纪类型</p><div id="disciplineTypeButtons" class="quick-picker"></div>
+          <p class="picker-title">程度</p><div id="disciplineSeverityButtons" class="quick-picker severity-picker"></div>
+          <label class="compact-field">事实（可不填）<input id="disciplineFact" type="text" maxlength="50" placeholder="只写发生的事实"></label>
+          <div class="management-actions"><button id="cancelDiscipline" class="secondary-button" type="button">返回</button><button id="saveDiscipline" class="primary-button" type="button">保存记录</button></div>
+        </div>
+      </section>
       <div class="viewer-actions">
         <button id="personPick" class="viewer-action" type="button">加入点人</button>
         <button id="togglePersonEditor" class="viewer-action primary" type="button">去向 / 请假</button>
       </div>
       <section id="personEditor" class="person-editor hidden" aria-label="编辑学生状态">
         <div class="editor-head"><h3>更新状态</h3><button id="closePersonEditor" type="button" aria-label="收起编辑面板">×</button></div>
-        <label class="field-label">今日去向<select id="personStatus"></select></label>
-        <label id="leaveUntilWrap" class="field-label hidden">请假至<input id="leaveUntil" type="date"></label>
+        <div class="field-label"><span>今日去向 · 点选立即生效（回校请点“在班”）</span><div id="personStatusButtons" class="status-picker"></div><input id="personStatus" type="hidden"></div>
+        <label id="leaveUntilWrap" class="field-label hidden">请假至（可不填；不填则持续到手动改为回校）<input id="leaveUntil" type="date"></label>
         <label class="field-label">备注<input id="personNote" type="text" placeholder="可不填"></label>
         <label class="secondary-button file-button full-button">拍照或更换头像<input id="personPhotoFile" type="file" accept="image/*" capture="environment"></label>
         <button id="savePerson" class="primary-button full-button" type="button">保存</button>
@@ -122,6 +188,6 @@
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=20260915-4" defer></script>
+  <script src="app.js?v=20260916-9" defer></script>
 </body>
 </html>
