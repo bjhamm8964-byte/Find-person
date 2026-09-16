@@ -1,5 +1,5 @@
-const CACHE = "find-person-shell-v14";
-const SHELL = ["./", "index.html", "styles.css?v=20260916-8", "app.js?v=20260916-9", "manifest.webmanifest", "icon.svg"];
+const CACHE = "find-person-shell-v15";
+const SHELL = ["./", "index.html", "styles.css?v=20260917-1", "app.js?v=20260917-1", "manifest.webmanifest", "icon.svg"];
 self.addEventListener("install", (event) => event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL))));
 self.addEventListener("activate", (event) => event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))));
 self.addEventListener("fetch", (event) => {

@@ -18,7 +18,7 @@ const placeholderImage = "data:image/svg+xml;charset=utf-8," + encodeURIComponen
 const state = {
   studentsPack: null, duty: null, dorm: null, whereabouts: {}, leaves: {},
   history: {}, autoArchive: true, management: {}, dutyOps: { commissioners: {}, days: {}, debts: {} },
-  mode: "find", query: "", currentPerson: null, pendingPhoto: null,
+  mode: "find", query: "", findLayout: localStorage.getItem("find-person-layout") === "grid" ? "grid" : "cards", currentPerson: null, pendingPhoto: null,
   impressionDraft: [], disciplineTypeDraft: "课堂", disciplineLevelDraft: "轻微",
   commissionerRole: "floor", dutyAction: null, dutyActionSelection: new Set(),
   viewerNames: [], viewerIndex: 0,
@@ -27,7 +27,7 @@ const state = {
 const $ = (id) => document.getElementById(id);
 const ids = [
   "setup","app","studentSetupFile","dataButton","dataDialog","dataStatus","dutyDataStatus","dormDataStatus","managementDataStatus","studentFile","dutyFile","dormFile","managementFile","exportStudents","exportDuty","exportDorm","exportManagement","forgetData",
-  "searchPanel","searchInput","clearSearch","searchHint","findView","dutyView","dormView","whereView","batchView","studentRail","resultTitle","resultCount","batchCount",
+  "searchPanel","searchInput","clearSearch","searchHint","findView","dutyView","dormView","whereView","batchView","studentRail","resultTitle","resultCount","layoutToggle","browseTip","batchCount",
   "dateLabel","dutyTitle","daySelect","dutyWeekNotice","dutyList","dutyTeamButton","commissionerStrip","dutyDebtList","commissionerDialog","commissionerRoleButtons","commissionerSearch","clearCommissioner","commissionerCandidates","dutyActionDialog","dutyActionEyebrow","dutyActionTitle","dutyActionHint","dutyActionCandidates","saveDutyAction","dormTitle","dormCount","dormList","whereDate","whereSummary","whereGroups","resetWhere","autoArchive","archiveStatus","saveToday","openHistory","exportHistory","historyDialog","historyDay","historySummary","historyRecords","historyExport",
   "pickedList","batchNote","copyBatch","clearBatch","personDialog","personHero","personName","personPhoto","personPinyin","personDorm","personPrev","personNext","personPick","togglePersonEditor","personEditor","closePersonEditor","personStatus","personStatusButtons","leaveUntilWrap","leaveUntil","personNote","personPhotoFile","savePerson",
   "personManagement","closeManagement","managementTitle","managementSummaryView","impressionSummary","managementNote","leaveCount","awayCount","disciplineCount","disciplineLevel","advancementLevel","latestDiscipline","editImpression","addDiscipline","impressionEditor","impressionButtons","managementNoteInput","cancelImpression","saveImpression","disciplineEditor","disciplineTypeButtons","disciplineSeverityButtons","disciplineFact","cancelDiscipline","saveDiscipline","toast"
@@ -148,7 +148,7 @@ function editDistance(a, b) {
 }
 function scoreStudent(student, rawQuery) {
   const q = normalize(rawQuery); if (!q) return 1;
-  const fields = [student.name, student.pinyin, student.initials, ...(student.aliases || [])].map(normalize);
+  const fields = [student.name, student.pinyin, student.initials, student.origin, student.hometown, student.household, ...(student.aliases || [])].map(normalize);
   if (fields.some((f) => f === q)) return 100;
   if (fields.some((f) => f.startsWith(q))) return 80;
   if (fields.some((f) => f.includes(q))) return 65;
@@ -367,19 +367,31 @@ function managementExportPayload() { return { version: 2, updatedAt: new Date().
 function dutyExportPayload() { return state.duty ? { ...state.duty, commissioners: { ...state.dutyOps.commissioners } } : null; }
 
 function persistPicked() { localStorage.setItem("find-person-picked", JSON.stringify([...state.picked])); els.batchCount.textContent = state.picked.size ? String(state.picked.size) : ""; }
-function togglePick(name) { state.picked.has(name) ? state.picked.delete(name) : state.picked.add(name); persistPicked(); renderStudents(); renderPicked(); toast(state.picked.has(name) ? `已加入 ${name}` : `已移除 ${name}`); }
+function togglePick(name) {
+  const adding = !state.picked.has(name); adding ? state.picked.add(name) : state.picked.delete(name);
+  if (state.mode === "batch" && adding) { state.query = ""; els.searchInput.value = ""; }
+  persistPicked(); renderStudents(); renderPicked(); toast(adding ? `已加入 ${name}` : `已移除 ${name}`);
+}
 
 function studentCard(student) {
   const status = statusFor(student.name); const card = document.createElement("button"); card.type = "button";
   card.className = `student-card${state.picked.has(student.name) ? " picked" : ""}${student.image ? "" : " placeholder"}`;
   card.setAttribute("aria-label", `${student.name}，${status}`);
-  card.innerHTML = `<img alt="${student.name}" src="${imageFor(student)}"><span class="gender-chip">${student.gender || "学生"}</span>${status !== "在班" ? `<span class="status-chip ${statusClass(status)}">${status}</span>` : ""}<span class="pick-mark">✓</span><span class="card-copy"><span class="card-name">${student.name}</span><span class="card-pinyin">${student.pinyin || ""}</span></span>`;
+  const meta = [student.pinyin, student.origin].filter(Boolean).join(" · ");
+  card.innerHTML = `<img alt="${student.name}" src="${imageFor(student)}"><span class="gender-chip">${student.gender || "学生"}</span>${status !== "在班" ? `<span class="status-chip ${statusClass(status)}">${status}</span>` : ""}<span class="pick-mark">✓</span><span class="card-copy"><span class="card-name">${student.name}</span><span class="card-pinyin">${meta}</span></span>`;
   card.addEventListener("click", () => state.mode === "batch" ? togglePick(student.name) : openPerson(student.name, filteredStudents().map((item) => item.name))); return card;
 }
 function renderStudents() {
   if (!state.studentsPack) return; const list = filteredStudents();
-  els.resultTitle.textContent = state.query ? `搜索“${state.query}”` : "全班同学"; els.resultCount.textContent = `${list.length} 人`;
-  els.searchHint.textContent = state.mode === "batch" ? "轻点卡片加入点名组" : "支持姓名、全拼、首字母和少量拼写误差";
+  const batchSearch = state.mode === "batch";
+  els.findView.classList.toggle("hidden", state.mode !== "find" && !(batchSearch && state.query));
+  els.layoutToggle.classList.toggle("hidden", state.mode !== "find");
+  els.studentRail.classList.toggle("grid-view", batchSearch || state.findLayout === "grid");
+  els.layoutToggle.textContent = state.findLayout === "grid" ? "大图滑动" : "网格一览";
+  els.browseTip.textContent = state.findLayout === "grid" ? "点照片查看详情" : "左右滑动查看 · 点头像可标记请假、去向或补照片";
+  els.browseTip.classList.toggle("hidden", batchSearch);
+  els.resultTitle.textContent = batchSearch ? "搜索结果" : (state.query ? `搜索“${state.query}”` : "全班同学"); els.resultCount.textContent = `${list.length} 人`;
+  els.searchHint.textContent = batchSearch ? (state.query ? "轻点照片加入，随后自动返回已选名单" : "输入姓名或拼音添加；未搜索时只显示已选人员") : "支持姓名、全拼、首字母、生源地和少量拼写误差";
   els.studentRail.replaceChildren();
   if (!list.length) { els.studentRail.append(emptyNode("没有找到，试试更短的拼音或首字母")); return; }
   list.forEach((student) => els.studentRail.append(studentCard(student)));
@@ -568,7 +580,7 @@ function showViewerPerson(index) {
   const name = state.viewerNames[state.viewerIndex]; const student = studentByName(name); if (!student) return;
   state.currentPerson = name; state.pendingPhoto = null;
   els.personManagement.classList.add("hidden"); setManagementView("summary");
-  const dorm = dormFor(name); const status = statusFor(name); els.personName.textContent = name; els.personPhoto.src = imageFor(student); els.personPhoto.alt = name; els.personPinyin.textContent = student.pinyin || ""; els.personDorm.textContent = `${status}${dorm ? ` · ${dorm.room.room}${dorm.member.bed ? ` · ${dorm.member.bed}` : ""}` : " · 未登记宿舍"}`;
+  const dorm = dormFor(name); const status = statusFor(name); els.personName.textContent = name; els.personPhoto.src = imageFor(student); els.personPhoto.alt = name; els.personPinyin.textContent = student.pinyin || ""; els.personDorm.textContent = `${status}${student.origin ? ` · ${student.origin}` : ""}${dorm ? ` · ${dorm.room.room}${dorm.member.bed ? ` · ${dorm.member.bed}` : ""}` : " · 未登记宿舍"}`;
   els.personStatus.value = status === "待确认" ? "请假" : status; els.leaveUntil.value = state.leaves[name]?.until || ""; els.personNote.value = noteFor(name); renderStatusPicker(); toggleLeaveField();
   els.personPrev.disabled = state.viewerIndex === 0; els.personNext.disabled = state.viewerIndex === state.viewerNames.length - 1;
   els.personPick.textContent = state.picked.has(name) ? "已加入点人" : "加入点人"; els.personPick.classList.toggle("picked", state.picked.has(name));
@@ -613,16 +625,17 @@ async function persistPerson(closeAfter = true, quiet = false) {
   if (closeAfter) els.personDialog.close();
   renderAll();
   if (!closeAfter) {
-    const dorm = dormFor(name); els.personDorm.textContent = `${statusFor(name)}${dorm ? ` · ${dorm.room.room}${dorm.member.bed ? ` · ${dorm.member.bed}` : ""}` : " · 未登记宿舍"}`;
+    const dorm = dormFor(name), student = studentByName(name); els.personDorm.textContent = `${statusFor(name)}${student?.origin ? ` · ${student.origin}` : ""}${dorm ? ` · ${dorm.room.room}${dorm.member.bed ? ` · ${dorm.member.bed}` : ""}` : " · 未登记宿舍"}`;
   }
   if (!quiet) toast(`已更新 ${name}`);
 }
 async function savePerson() { await persistPerson(true, false); }
 
 function setMode(mode) {
+  if (mode === "batch" && state.mode !== "batch") { state.query = ""; els.searchInput.value = ""; }
   state.mode = mode; document.querySelectorAll(".mode").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
-  els.findView.classList.toggle("hidden", ["duty","dorm","where"].includes(mode)); els.dutyView.classList.toggle("hidden", mode !== "duty"); els.dormView.classList.toggle("hidden", mode !== "dorm"); els.whereView.classList.toggle("hidden", mode !== "where"); els.batchView.classList.toggle("hidden", mode !== "batch"); els.searchPanel.classList.toggle("hidden", !["find","batch"].includes(mode));
-  if (mode === "duty") renderDuty(); if (mode === "dorm") renderDorm(); if (mode === "where") renderWhere(); if (mode === "batch") { renderStudents(); renderPicked(); setTimeout(() => els.searchInput.focus(),50); }
+  els.findView.classList.toggle("hidden", mode !== "find"); els.dutyView.classList.toggle("hidden", mode !== "duty"); els.dormView.classList.toggle("hidden", mode !== "dorm"); els.whereView.classList.toggle("hidden", mode !== "where"); els.batchView.classList.toggle("hidden", mode !== "batch"); els.searchPanel.classList.toggle("hidden", !["find","batch"].includes(mode));
+  if (mode === "duty") renderDuty(); if (mode === "dorm") renderDorm(); if (mode === "where") renderWhere(); if (mode === "find") renderStudents(); if (mode === "batch") { renderStudents(); renderPicked(); setTimeout(() => els.searchInput.focus(),50); }
 }
 function renderDataStatus() {
   els.dataStatus.textContent = `当前名册 · ${activeStudents().length} 名在读学生 · 照片 ${students().filter((s)=>s.image).length}/${students().length}`;
@@ -642,6 +655,7 @@ let toastTimer; function toast(message) { els.toast.textContent = message; els.t
 
 document.querySelectorAll(".mode").forEach((button) => button.addEventListener("click", () => setMode(button.dataset.mode)));
 els.searchInput.addEventListener("input", (e) => { state.query = e.target.value.trim(); renderStudents(); }); els.clearSearch.addEventListener("click", () => { state.query=""; els.searchInput.value=""; renderStudents(); els.searchInput.focus(); }); els.daySelect.addEventListener("change", () => renderDuty(els.daySelect.value));
+els.layoutToggle.addEventListener("click", () => { state.findLayout = state.findLayout === "grid" ? "cards" : "grid"; localStorage.setItem("find-person-layout",state.findLayout); renderStudents(); });
 els.dutyTeamButton.addEventListener("click", () => openCommissionerDialog("floor")); els.commissionerSearch.addEventListener("input",renderCommissionerCandidates);
 els.clearCommissioner.addEventListener("click", async () => { state.dutyOps.commissioners[state.commissionerRole] = null; await persistDutyOps(); renderCommissionerRoles(); renderCommissionerCandidates(); renderCommissioners(); renderDataStatus(); toast("该岗位已设为空缺，可随时换人"); });
 els.saveDutyAction.addEventListener("click",saveDutyInspection);

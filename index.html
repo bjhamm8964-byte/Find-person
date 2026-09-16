@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="styles.css?v=20260916-8">
+  <link rel="stylesheet" href="styles.css?v=20260917-1">
 </head>
 <body>
   <header class="topbar">
@@ -47,9 +47,12 @@
       </section>
 
       <section id="findView" class="view">
-        <div class="section-heading"><h2 id="resultTitle">全班同学</h2><span id="resultCount"></span></div>
+        <div class="section-heading">
+          <h2 id="resultTitle">全班同学</h2>
+          <div class="result-tools"><span id="resultCount"></span><button id="layoutToggle" class="layout-toggle" type="button">网格一览</button></div>
+        </div>
         <div id="studentRail" class="student-rail"></div>
-        <p class="swipe-tip">左右滑动查看 · 点头像可标记请假、去向或补照片</p>
+        <p id="browseTip" class="swipe-tip">左右滑动查看 · 点头像可标记请假、去向或补照片</p>
       </section>
 
       <section id="dutyView" class="view hidden">
@@ -188,6 +191,6 @@
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=20260916-9" defer></script>
+  <script src="app.js?v=20260917-1" defer></script>
 </body>
 </html>
