@@ -18,7 +18,7 @@ const placeholderImage = "data:image/svg+xml;charset=utf-8," + encodeURIComponen
 const state = {
   studentsPack: null, duty: null, dorm: null, whereabouts: {}, leaves: {},
   history: {}, autoArchive: true, management: {}, dutyOps: { commissioners: {}, days: {}, debts: {} },
-  mode: "find", query: "", findLayout: localStorage.getItem("find-person-layout") === "grid" ? "grid" : "cards", currentPerson: null, pendingPhoto: null,
+  mode: "find", query: "", genderFilter: "all", findLayout: localStorage.getItem("find-person-layout") === "grid" ? "grid" : "cards", currentPerson: null, pendingPhoto: null,
   impressionDraft: [], disciplineTypeDraft: "课堂", disciplineLevelDraft: "轻微",
   commissionerRole: "floor", dutyAction: null, dutyActionSelection: new Set(),
   viewerNames: [], viewerIndex: 0,
@@ -27,7 +27,7 @@ const state = {
 const $ = (id) => document.getElementById(id);
 const ids = [
   "setup","app","studentSetupFile","dataButton","dataDialog","dataStatus","dutyDataStatus","dormDataStatus","managementDataStatus","studentFile","dutyFile","dormFile","managementFile","exportStudents","exportDuty","exportDorm","exportManagement","forgetData",
-  "searchPanel","searchInput","clearSearch","searchHint","findView","dutyView","dormView","whereView","batchView","studentRail","resultTitle","resultCount","layoutToggle","browseTip","batchCount",
+  "searchPanel","searchInput","clearSearch","searchHint","genderFilters","findView","dutyView","dormView","whereView","batchView","studentRail","resultTitle","resultCount","layoutToggle","browseTip","batchCount",
   "dateLabel","dutyTitle","daySelect","dutyWeekNotice","dutyList","dutyTeamButton","commissionerStrip","dutyDebtList","commissionerDialog","commissionerRoleButtons","commissionerSearch","clearCommissioner","commissionerCandidates","dutyActionDialog","dutyActionEyebrow","dutyActionTitle","dutyActionHint","dutyActionCandidates","saveDutyAction","dormTitle","dormCount","dormList","whereDate","whereSummary","whereGroups","resetWhere","autoArchive","archiveStatus","saveToday","openHistory","exportHistory","historyDialog","historyDay","historySummary","historyRecords","historyExport",
   "pickedList","batchNote","copyBatch","clearBatch","personDialog","personHero","personName","personPhoto","personPinyin","personDorm","personPrev","personNext","personPick","togglePersonEditor","personEditor","closePersonEditor","personStatus","personStatusButtons","leaveUntilWrap","leaveUntil","personNote","personPhotoFile","savePerson",
   "personManagement","closeManagement","managementTitle","managementSummaryView","impressionSummary","managementNote","leaveCount","awayCount","disciplineCount","disciplineLevel","advancementLevel","latestDiscipline","editImpression","addDiscipline","impressionEditor","impressionButtons","managementNoteInput","cancelImpression","saveImpression","disciplineEditor","disciplineTypeButtons","disciplineSeverityButtons","disciplineFact","cancelDiscipline","saveDiscipline","toast"
@@ -157,7 +157,8 @@ function scoreStudent(student, rawQuery) {
   return 0;
 }
 function filteredStudents() {
-  const ranked = activeStudents().map((student, index) => ({ student, index, score: scoreStudent(student, state.query) })).sort((a,b) => b.score - a.score || a.index - b.index);
+  const candidates = activeStudents().filter((student) => state.genderFilter === "all" || student.gender === state.genderFilter);
+  const ranked = candidates.map((student, index) => ({ student, index, score: scoreStudent(student, state.query) })).sort((a,b) => b.score - a.score || a.index - b.index);
   const confident = ranked.filter((item) => item.score >= 45);
   return (confident.length ? confident : ranked.filter((item) => item.score > 0)).map((item) => item.student);
 }
@@ -390,7 +391,9 @@ function renderStudents() {
   els.layoutToggle.textContent = state.findLayout === "grid" ? "大图滑动" : "网格一览";
   els.browseTip.textContent = state.findLayout === "grid" ? "点照片查看详情" : "左右滑动查看 · 点头像可标记请假、去向或补照片";
   els.browseTip.classList.toggle("hidden", batchSearch);
-  els.resultTitle.textContent = batchSearch ? "搜索结果" : (state.query ? `搜索“${state.query}”` : "全班同学"); els.resultCount.textContent = `${list.length} 人`;
+  const genderLabel = state.genderFilter === "男" ? "男生" : state.genderFilter === "女" ? "女生" : "全班同学";
+  els.resultTitle.textContent = batchSearch ? "搜索结果" : (state.query ? `搜索“${state.query}”` : genderLabel); els.resultCount.textContent = `${list.length} 人`;
+  els.genderFilters.querySelectorAll("[data-gender]").forEach((button) => { const active = button.dataset.gender === state.genderFilter; button.classList.toggle("active", active); button.setAttribute("aria-pressed", String(active)); });
   els.searchHint.textContent = batchSearch ? (state.query ? "轻点照片加入，随后自动返回已选名单" : "输入姓名或拼音添加；未搜索时只显示已选人员") : "支持姓名、全拼、首字母、生源地和少量拼写误差";
   els.studentRail.replaceChildren();
   if (!list.length) { els.studentRail.append(emptyNode("没有找到，试试更短的拼音或首字母")); return; }
@@ -655,6 +658,7 @@ let toastTimer; function toast(message) { els.toast.textContent = message; els.t
 
 document.querySelectorAll(".mode").forEach((button) => button.addEventListener("click", () => setMode(button.dataset.mode)));
 els.searchInput.addEventListener("input", (e) => { state.query = e.target.value.trim(); renderStudents(); }); els.clearSearch.addEventListener("click", () => { state.query=""; els.searchInput.value=""; renderStudents(); els.searchInput.focus(); }); els.daySelect.addEventListener("change", () => renderDuty(els.daySelect.value));
+els.genderFilters.addEventListener("click", (event) => { const button = event.target.closest("[data-gender]"); if (!button) return; state.genderFilter = button.dataset.gender; renderStudents(); });
 els.layoutToggle.addEventListener("click", () => { state.findLayout = state.findLayout === "grid" ? "cards" : "grid"; localStorage.setItem("find-person-layout",state.findLayout); renderStudents(); });
 els.dutyTeamButton.addEventListener("click", () => openCommissionerDialog("floor")); els.commissionerSearch.addEventListener("input",renderCommissionerCandidates);
 els.clearCommissioner.addEventListener("click", async () => { state.dutyOps.commissioners[state.commissionerRole] = null; await persistDutyOps(); renderCommissionerRoles(); renderCommissionerCandidates(); renderCommissioners(); renderDataStatus(); toast("该岗位已设为空缺，可随时换人"); });
