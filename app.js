@@ -16,7 +16,7 @@ const DUTY_ROLES = [
 const placeholderImage = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="40" fill="#dce9df"/><circle cx="100" cy="76" r="38" fill="#6c8c7d"/><path d="M35 185c5-45 31-69 65-69s60 24 65 69" fill="#6c8c7d"/></svg>`);
 
 const state = {
-  studentsPack: null, duty: null, dorm: null, whereabouts: {}, leaves: {},
+  studentsPack: null, duty: null, dorm: null, seating: null, whereabouts: {}, leaves: {},
   history: {}, autoArchive: true, management: {}, dutyOps: { commissioners: {}, days: {}, debts: {} },
   mode: "find", query: "", genderFilter: "all", findLayout: localStorage.getItem("find-person-layout") === "grid" ? "grid" : "cards", currentPerson: null, pendingPhoto: null,
   impressionDraft: [], disciplineTypeDraft: "课堂", disciplineLevelDraft: "轻微",
@@ -26,9 +26,9 @@ const state = {
 };
 const $ = (id) => document.getElementById(id);
 const ids = [
-  "setup","app","studentSetupFile","dataButton","dataDialog","dataStatus","dutyDataStatus","dormDataStatus","managementDataStatus","studentFile","dutyFile","dormFile","managementFile","exportStudents","exportDuty","exportDorm","exportManagement","forgetData",
-  "searchPanel","searchInput","clearSearch","searchHint","genderFilters","findView","dutyView","dormView","whereView","batchView","studentRail","resultTitle","resultCount","layoutToggle","browseTip","batchCount",
-  "dateLabel","dutyTitle","daySelect","dutyWeekNotice","dutyList","dutyTeamButton","commissionerStrip","dutyDebtList","commissionerDialog","commissionerRoleButtons","commissionerSearch","clearCommissioner","commissionerCandidates","dutyActionDialog","dutyActionEyebrow","dutyActionTitle","dutyActionHint","dutyActionCandidates","saveDutyAction","dormTitle","dormCount","dormList","whereDate","whereSummary","whereGroups","resetWhere","autoArchive","archiveStatus","saveToday","openHistory","exportHistory","historyDialog","historyDay","historySummary","historyRecords","historyExport",
+  "setup","app","studentSetupFile","dataButton","dataDialog","dataStatus","dutyDataStatus","dormDataStatus","seatingDataStatus","managementDataStatus","studentFile","dutyFile","dormFile","seatingFile","managementFile","exportStudents","exportDuty","exportDorm","exportSeating","exportManagement","forgetData",
+  "searchPanel","searchInput","clearSearch","searchHint","genderFilters","findView","seatingView","dutyView","dormView","whereView","batchView","studentRail","resultTitle","resultCount","layoutToggle","browseTip","batchCount","seatingDate","seatingCount","seatingBoard","seatingNotice",
+  "dateLabel","dutyTitle","daySelect","dutyWeekNotice","dutyList","dutyTeamButton","commissionerStrip","dutyDebtList","commissionerDialog","commissionerRoleButtons","commissionerSearch","clearCommissioner","commissionerCandidates","dutyActionDialog","dutyActionEyebrow","dutyActionTitle","dutyActionHint","dutyActionCandidates","saveDutyAction","dormTitle","dormCount","dormList","whereDate","whereSummary","whereGroups","resetWhere","autoArchive","archiveStatus","saveToday","openHistory","exportTodayDuty","exportHistory","historyDialog","historyDay","historySummary","historyRecords","historyExport",
   "pickedList","batchNote","copyBatch","clearBatch","personDialog","personHero","personName","personPhoto","personPinyin","personDorm","personPrev","personNext","personPick","togglePersonEditor","personEditor","closePersonEditor","personStatus","personStatusButtons","leaveUntilWrap","leaveUntil","personNote","personPhotoFile","savePerson",
   "personManagement","closeManagement","managementTitle","managementSummaryView","impressionSummary","managementNote","leaveCount","awayCount","disciplineCount","disciplineLevel","advancementLevel","latestDiscipline","editImpression","addDiscipline","impressionEditor","impressionButtons","managementNoteInput","cancelImpression","saveImpression","disciplineEditor","disciplineTypeButtons","disciplineSeverityButtons","disciplineFact","cancelDiscipline","saveDiscipline","toast"
 ];
@@ -77,6 +77,12 @@ function validateStudents(payload) {
 }
 function validateDuty(payload) { if (!payload?.days || typeof payload.days !== "object") throw new Error("值日数据缺少 days"); }
 function validateDorm(payload) { if (!Array.isArray(payload?.rooms)) throw new Error("宿舍数据缺少 rooms"); }
+function validateSeating(payload) {
+  if (!Array.isArray(payload?.groups) || payload.groups.length !== 4) throw new Error("座位数据应包含四个座位组");
+  const names = payload.groups.flatMap((group) => (group.rows || []).flat()).filter(Boolean);
+  if (!names.length) throw new Error("座位数据没有学生姓名");
+  if (new Set(names).size !== names.length) throw new Error("座位数据存在重复姓名");
+}
 function validateManagement(payload) { if (!payload?.profiles || typeof payload.profiles !== "object" || Array.isArray(payload.profiles)) throw new Error("管理记录缺少 profiles"); }
 
 function normalizeDutyOps(value) {
@@ -100,14 +106,16 @@ async function importDataFile(file, expectedKind = "auto") {
     if (variable === "FIND_PERSON_PRIVATE_DATA") {
       validateStudents(payload);
       state.studentsPack = { version: payload.version, className: payload.className, students: payload.students };
-      state.duty = payload.duty || state.duty; state.dorm = payload.dorm || state.dorm;
-      mergeDutyCommissioners(state.duty); await Promise.all([dbSet("students", state.studentsPack), dbSet("duty", state.duty), dbSet("dorm", state.dorm),dbSet("duty-ops-v1",state.dutyOps)]);
+      state.duty = payload.duty || state.duty; state.dorm = payload.dorm || state.dorm; state.seating = payload.seating || state.seating;
+      mergeDutyCommissioners(state.duty); await Promise.all([dbSet("students", state.studentsPack), dbSet("duty", state.duty), dbSet("dorm", state.dorm), dbSet("seating", state.seating), dbSet("duty-ops-v1",state.dutyOps)]);
     } else if (variable === "FIND_PERSON_STUDENTS_DATA" && ["auto","students"].includes(expectedKind)) {
       validateStudents(payload); state.studentsPack = payload; await dbSet("students", payload);
     } else if (variable === "FIND_PERSON_DUTY_DATA" && ["auto","duty"].includes(expectedKind)) {
       validateDuty(payload); state.duty = payload; mergeDutyCommissioners(payload); await Promise.all([dbSet("duty", payload),dbSet("duty-ops-v1",state.dutyOps)]);
     } else if (variable === "FIND_PERSON_DORM_DATA" && ["auto","dorm"].includes(expectedKind)) {
       validateDorm(payload); state.dorm = payload; await dbSet("dorm", payload);
+    } else if (variable === "FIND_PERSON_SEATING_DATA" && ["auto","seating"].includes(expectedKind)) {
+      validateSeating(payload); state.seating = payload; await dbSet("seating", payload);
     } else if (variable === "FIND_PERSON_MANAGEMENT_DATA" && ["auto","management"].includes(expectedKind)) {
       validateManagement(payload); state.management = payload.profiles; if (payload.dutyOps) state.dutyOps = normalizeDutyOps(payload.dutyOps); await Promise.all([dbSet("management-v1", state.management),dbSet("duty-ops-v1",state.dutyOps)]);
     } else throw new Error("数据包类型与导入口不一致");
@@ -116,7 +124,7 @@ async function importDataFile(file, expectedKind = "auto") {
     if (state.studentsPack && state.autoArchive) await saveDailySnapshot("数据更新");
     els.dataDialog.close(); toast(`已导入 ${file.name}`);
   } catch (error) { toast(error.message || "导入失败"); }
-  finally { [els.studentSetupFile,els.studentFile,els.dutyFile,els.dormFile,els.managementFile].forEach((input) => { input.value = ""; }); }
+  finally { [els.studentSetupFile,els.studentFile,els.dutyFile,els.dormFile,els.seatingFile,els.managementFile].forEach((input) => { input.value = ""; }); }
 }
 
 async function exportJS(variable, payload, filename) {
@@ -280,6 +288,16 @@ async function exportAttendanceHistory() {
   const csv = `\ufeff${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}`;
   await shareOrDownload(new File([csv], `whereabouts-history-${TODAY}.csv`, { type: "text/csv;charset=utf-8" }));
 }
+async function exportTodayForDuty() {
+  const payload = {
+    version: "2026-09-17",
+    className: state.studentsPack?.className || "班级",
+    date: TODAY,
+    generatedAt: new Date().toISOString(),
+    records: currentRecords(),
+  };
+  await exportJS("FIND_PERSON_WHEREABOUTS_DATA", payload, `whereabouts-${TODAY}.js`);
+}
 
 function profileFor(name) {
   const profile = state.management[name] || {};
@@ -398,6 +416,40 @@ function renderStudents() {
   els.studentRail.replaceChildren();
   if (!list.length) { els.studentRail.append(emptyNode("没有找到，试试更短的拼音或首字母")); return; }
   list.forEach((student) => els.studentRail.append(studentCard(student)));
+}
+
+function seatingNames() {
+  return (state.seating?.groups || []).flatMap((group) => (group.rows || []).flat()).filter(Boolean);
+}
+function renderSeating() {
+  els.seatingBoard.replaceChildren();
+  if (!state.seating) {
+    els.seatingDate.textContent = "尚未导入"; els.seatingCount.textContent = "";
+    els.seatingNotice.textContent = "请在数据管理中导入 seating-data.js";
+    els.seatingBoard.append(emptyNode("暂无座位表")); return;
+  }
+  const allNames = seatingNames(); const matchedNames = allNames.filter((name) => studentByName(name));
+  const unmatched = allNames.filter((name) => !studentByName(name));
+  els.seatingDate.textContent = state.seating.dateLabel || state.seating.date || "已导入座位表";
+  els.seatingCount.textContent = `${allNames.length} 个座位`;
+  els.seatingNotice.textContent = unmatched.length ? `${unmatched.length} 个姓名未匹配头像库，请核对座位表或名册` : "点击头像查看学生详情 · 黄点表示当前不在班";
+  const back = document.createElement("div"); back.className = "seating-stage"; back.textContent = "教室后方"; els.seatingBoard.append(back);
+  const groups = document.createElement("div"); groups.className = "seating-groups";
+  state.seating.groups.forEach((group, groupIndex) => {
+    const pair = document.createElement("section"); pair.className = "seating-pair"; pair.setAttribute("aria-label", `第${groupIndex + 1}组`);
+    (group.rows || []).forEach((row) => {
+      [row?.[0] || "", row?.[1] || ""].forEach((name) => {
+        if (!name) { const empty = document.createElement("span"); empty.className = "seat-empty"; empty.setAttribute("aria-hidden", "true"); pair.append(empty); return; }
+        const student = studentByName(name); const status = statusFor(name); const button = document.createElement("button"); button.type = "button"; button.className = "seat-person";
+        button.setAttribute("aria-label", `${name}，${status}`);
+        button.innerHTML = `<img alt="" src="${imageFor(student)}"><strong>${name}</strong><i class="seat-status ${statusClass(status)}" aria-hidden="true"></i>`;
+        button.addEventListener("click", () => openPerson(name, matchedNames)); pair.append(button);
+      });
+    });
+    groups.append(pair);
+  });
+  const front = document.createElement("div"); front.className = "seating-front"; front.innerHTML = "<span>讲台</span>";
+  els.seatingBoard.append(groups, front);
 }
 
 function weekdayKey(date = new Date()) { return ["周日","周一","周二","周三","周四","周五","周六"][date.getDay()]; }
@@ -637,14 +689,15 @@ async function savePerson() { await persistPerson(true, false); }
 function setMode(mode) {
   if (mode === "batch" && state.mode !== "batch") { state.query = ""; els.searchInput.value = ""; }
   state.mode = mode; document.querySelectorAll(".mode").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
-  els.findView.classList.toggle("hidden", mode !== "find"); els.dutyView.classList.toggle("hidden", mode !== "duty"); els.dormView.classList.toggle("hidden", mode !== "dorm"); els.whereView.classList.toggle("hidden", mode !== "where"); els.batchView.classList.toggle("hidden", mode !== "batch"); els.searchPanel.classList.toggle("hidden", !["find","batch"].includes(mode));
-  if (mode === "duty") renderDuty(); if (mode === "dorm") renderDorm(); if (mode === "where") renderWhere(); if (mode === "find") renderStudents(); if (mode === "batch") { renderStudents(); renderPicked(); setTimeout(() => els.searchInput.focus(),50); }
+  els.findView.classList.toggle("hidden", mode !== "find"); els.seatingView.classList.toggle("hidden", mode !== "seating"); els.dutyView.classList.toggle("hidden", mode !== "duty"); els.dormView.classList.toggle("hidden", mode !== "dorm"); els.whereView.classList.toggle("hidden", mode !== "where"); els.batchView.classList.toggle("hidden", mode !== "batch"); els.searchPanel.classList.toggle("hidden", !["find","batch"].includes(mode));
+  if (mode === "seating") renderSeating(); if (mode === "duty") renderDuty(); if (mode === "dorm") renderDorm(); if (mode === "where") renderWhere(); if (mode === "find") renderStudents(); if (mode === "batch") { renderStudents(); renderPicked(); setTimeout(() => els.searchInput.focus(),50); }
 }
 function renderDataStatus() {
   els.dataStatus.textContent = `当前名册 · ${activeStudents().length} 名在读学生 · 照片 ${students().filter((s)=>s.image).length}/${students().length}`;
   const dutyRoleCount = DUTY_ROLES.filter((role) => state.dutyOps.commissioners[role.id]).length;
   els.dutyDataStatus.textContent = state.duty ? `${state.duty.weekLabel || state.duty.weekStart || "已导入"} · 劳动委员 ${dutyRoleCount}/4` : "尚未导入";
   els.dormDataStatus.textContent = state.dorm ? `${state.dorm.rooms.length} 间宿舍 · ${state.dorm.rooms.reduce((n,r)=>n+r.members.length,0)} 人` : "尚未导入";
+  els.seatingDataStatus.textContent = state.seating ? `${state.seating.dateLabel || state.seating.date || "已导入"} · ${seatingNames().length} 个座位` : "尚未导入";
   const managed = Object.values(state.management).filter((profile) => profile?.impressionTags?.length || profile?.workNote || profile?.discipline?.length).length;
   const incidents = Object.values(state.management).reduce((count, profile) => count + (Array.isArray(profile?.discipline) ? profile.discipline.length : 0), 0);
   const dutyDebtCount = Object.values(state.dutyOps.debts).reduce((count,debt) => count + (debt?.makeup || 0) + (debt?.redo || 0),0);
@@ -652,7 +705,7 @@ function renderDataStatus() {
 }
 function renderAll() {
   const ready = Boolean(state.studentsPack); els.setup.classList.toggle("hidden",ready); els.app.classList.toggle("hidden",!ready); els.dataButton.classList.toggle("hidden",!ready); if (!ready) return;
-  persistPicked(); renderDataStatus(); renderStudents(); renderDuty(); renderDorm(); renderWhere(); renderPicked(); renderArchiveStatus(); setMode(state.mode);
+  persistPicked(); renderDataStatus(); renderStudents(); renderSeating(); renderDuty(); renderDorm(); renderWhere(); renderPicked(); renderArchiveStatus(); setMode(state.mode);
 }
 let toastTimer; function toast(message) { els.toast.textContent = message; els.toast.classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(() => els.toast.classList.remove("show"),2200); }
 
@@ -663,10 +716,10 @@ els.layoutToggle.addEventListener("click", () => { state.findLayout = state.find
 els.dutyTeamButton.addEventListener("click", () => openCommissionerDialog("floor")); els.commissionerSearch.addEventListener("input",renderCommissionerCandidates);
 els.clearCommissioner.addEventListener("click", async () => { state.dutyOps.commissioners[state.commissionerRole] = null; await persistDutyOps(); renderCommissionerRoles(); renderCommissionerCandidates(); renderCommissioners(); renderDataStatus(); toast("该岗位已设为空缺，可随时换人"); });
 els.saveDutyAction.addEventListener("click",saveDutyInspection);
-els.studentSetupFile.addEventListener("change", (e) => importDataFile(e.target.files[0],"students")); els.studentFile.addEventListener("change", (e) => importDataFile(e.target.files[0],"students")); els.dutyFile.addEventListener("change", (e) => importDataFile(e.target.files[0],"duty")); els.dormFile.addEventListener("change", (e) => importDataFile(e.target.files[0],"dorm")); els.managementFile.addEventListener("change", (e) => importDataFile(e.target.files[0],"management"));
-els.dataButton.addEventListener("click", () => { renderDataStatus(); els.dataDialog.showModal(); }); els.exportStudents.addEventListener("click", () => exportJS("FIND_PERSON_STUDENTS_DATA",state.studentsPack,`students-data-${TODAY}.js`)); els.exportDuty.addEventListener("click", () => exportJS("FIND_PERSON_DUTY_DATA",dutyExportPayload(),`duty-data-${state.duty?.weekStart || TODAY}.js`)); els.exportDorm.addEventListener("click", () => exportJS("FIND_PERSON_DORM_DATA",state.dorm,`dorm-data-${TODAY}.js`));
+els.studentSetupFile.addEventListener("change", (e) => importDataFile(e.target.files[0],"students")); els.studentFile.addEventListener("change", (e) => importDataFile(e.target.files[0],"students")); els.dutyFile.addEventListener("change", (e) => importDataFile(e.target.files[0],"duty")); els.dormFile.addEventListener("change", (e) => importDataFile(e.target.files[0],"dorm")); els.seatingFile.addEventListener("change", (e) => importDataFile(e.target.files[0],"seating")); els.managementFile.addEventListener("change", (e) => importDataFile(e.target.files[0],"management"));
+els.dataButton.addEventListener("click", () => { renderDataStatus(); els.dataDialog.showModal(); }); els.exportStudents.addEventListener("click", () => exportJS("FIND_PERSON_STUDENTS_DATA",state.studentsPack,`students-data-${TODAY}.js`)); els.exportDuty.addEventListener("click", () => exportJS("FIND_PERSON_DUTY_DATA",dutyExportPayload(),`duty-data-${state.duty?.weekStart || TODAY}.js`)); els.exportDorm.addEventListener("click", () => exportJS("FIND_PERSON_DORM_DATA",state.dorm,`dorm-data-${TODAY}.js`)); els.exportSeating.addEventListener("click", () => exportJS("FIND_PERSON_SEATING_DATA",state.seating,`seating-data-${state.seating?.date || TODAY}.js`));
 els.exportManagement.addEventListener("click", () => exportJS("FIND_PERSON_MANAGEMENT_DATA",managementExportPayload(),`management-data-${TODAY}.js`));
-els.forgetData.addEventListener("click", async () => { if (!window.confirm("确定清除这台设备上的学生、值日、宿舍、历史留存和管理记录吗？请先导出需要的备份。")) return; await clearDB(); state.studentsPack=state.duty=state.dorm=null; state.whereabouts={}; state.leaves={}; state.history={}; state.management={}; state.dutyOps=normalizeDutyOps(null); state.autoArchive=true; els.autoArchive.checked=true; state.picked.clear(); persistPicked(); els.dataDialog.close(); renderAll(); toast("已清除本机全部数据"); });
+els.forgetData.addEventListener("click", async () => { if (!window.confirm("确定清除这台设备上的学生、值日、宿舍、座位、历史留存和管理记录吗？请先导出需要的备份。")) return; await clearDB(); state.studentsPack=state.duty=state.dorm=state.seating=null; state.whereabouts={}; state.leaves={}; state.history={}; state.management={}; state.dutyOps=normalizeDutyOps(null); state.autoArchive=true; els.autoArchive.checked=true; state.picked.clear(); persistPicked(); els.dataDialog.close(); renderAll(); toast("已清除本机全部数据"); });
 els.batchNote.value = localStorage.getItem("find-person-note") || ""; els.batchNote.addEventListener("input", () => localStorage.setItem("find-person-note",els.batchNote.value)); els.clearBatch.addEventListener("click", () => { state.picked.clear(); persistPicked(); renderPicked(); renderStudents(); toast("已清空点名组"); });
 els.copyBatch.addEventListener("click", async () => { if (!state.picked.size) return toast("还没有选择学生"); const note=els.batchNote.value.trim(); const text=`人员：${[...state.picked].join("、")}${note?`\n事项：${note}`:""}`; try { await navigator.clipboard.writeText(text); toast("名单与备注已复制"); } catch { window.prompt("长按复制",text); } });
 els.personPhotoFile.addEventListener("change", async (e) => { if (!e.target.files[0]) return; try { state.pendingPhoto=await compressPhoto(e.target.files[0]); els.personPhoto.src=state.pendingPhoto; toast("照片已处理，点保存生效"); } catch { toast("照片处理失败"); } }); els.savePerson.addEventListener("click",savePerson);
@@ -697,6 +750,7 @@ els.resetWhere.addEventListener("click", async () => {
 els.saveToday.addEventListener("click", () => saveDailySnapshot("手动保存", true));
 els.openHistory.addEventListener("click", () => { renderHistoryDialog(TODAY); els.historyDialog.showModal(); });
 els.historyDay.addEventListener("change", () => renderHistoryDialog(els.historyDay.value));
+els.exportTodayDuty.addEventListener("click", exportTodayForDuty);
 els.exportHistory.addEventListener("click", exportAttendanceHistory); els.historyExport.addEventListener("click", exportAttendanceHistory);
 els.autoArchive.addEventListener("change", async () => {
   state.autoArchive = els.autoArchive.checked; await dbSet("attendance-auto", state.autoArchive);
@@ -722,11 +776,11 @@ document.addEventListener("visibilitychange", async () => {
 
 (async () => {
   try {
-    const [studentsData,duty,dorm,legacy,whereToday,whereCurrent,leaves,history,autoArchive,management,dutyOps] = await Promise.all([dbGet("students"),dbGet("duty"),dbGet("dorm"),dbGet("active"),dbGet(`where:${TODAY}`),dbGet("where:current"),dbGet("leaves"),dbGet("attendance-history-v1"),dbGet("attendance-auto"),dbGet("management-v1"),dbGet("duty-ops-v1")]);
-    state.studentsPack=studentsData; state.duty=duty; state.dorm=dorm; state.whereabouts=whereCurrent||whereToday||{}; state.leaves=leaves||{}; state.history=history||{}; state.management=management||{}; state.dutyOps=normalizeDutyOps(dutyOps); mergeDutyCommissioners(state.duty); state.autoArchive=autoArchive !== false; els.autoArchive.checked=state.autoArchive;
+    const [studentsData,duty,dorm,seating,legacy,whereToday,whereCurrent,leaves,history,autoArchive,management,dutyOps] = await Promise.all([dbGet("students"),dbGet("duty"),dbGet("dorm"),dbGet("seating"),dbGet("active"),dbGet(`where:${TODAY}`),dbGet("where:current"),dbGet("leaves"),dbGet("attendance-history-v1"),dbGet("attendance-auto"),dbGet("management-v1"),dbGet("duty-ops-v1")]);
+    state.studentsPack=studentsData; state.duty=duty; state.dorm=dorm; state.seating=seating; state.whereabouts=whereCurrent||whereToday||{}; state.leaves=leaves||{}; state.history=history||{}; state.management=management||{}; state.dutyOps=normalizeDutyOps(dutyOps); mergeDutyCommissioners(state.duty); state.autoArchive=autoArchive !== false; els.autoArchive.checked=state.autoArchive;
     if (state.duty?.commissioners) await dbSet("duty-ops-v1",state.dutyOps);
     if (!whereCurrent && whereToday) await dbSet("where:current", state.whereabouts);
-    if (!state.studentsPack && legacy?.students) { state.studentsPack={version:legacy.version,className:legacy.className,students:legacy.students}; state.duty=state.duty||legacy.duty||null; state.dorm=state.dorm||legacy.dorm||null; mergeDutyCommissioners(state.duty); await Promise.all([dbSet("students",state.studentsPack),dbSet("duty",state.duty),dbSet("dorm",state.dorm),dbSet("duty-ops-v1",state.dutyOps)]); }
+    if (!state.studentsPack && legacy?.students) { state.studentsPack={version:legacy.version,className:legacy.className,students:legacy.students}; state.duty=state.duty||legacy.duty||null; state.dorm=state.dorm||legacy.dorm||null; state.seating=state.seating||legacy.seating||null; mergeDutyCommissioners(state.duty); await Promise.all([dbSet("students",state.studentsPack),dbSet("duty",state.duty),dbSet("dorm",state.dorm),dbSet("seating",state.seating),dbSet("duty-ops-v1",state.dutyOps)]); }
   } catch { toast("无法读取本机数据"); }
   renderAll();
   if (state.studentsPack && state.autoArchive) await saveDailySnapshot("打开应用");

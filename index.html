@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="styles.css?v=20260917-2">
+  <link rel="stylesheet" href="styles.css?v=20260920-1">
 </head>
 <body>
   <header class="topbar">
@@ -31,6 +31,7 @@
     <div id="app" class="hidden">
       <nav class="mode-switch" aria-label="功能模式">
         <button class="mode active" data-mode="find" type="button"><span>找人</span></button>
+        <button class="mode" data-mode="seating" type="button"><span>座位</span></button>
         <button class="mode" data-mode="duty" type="button"><span>值日</span></button>
         <button class="mode" data-mode="dorm" type="button"><span>宿舍</span></button>
         <button class="mode" data-mode="where" type="button"><span>去向</span></button>
@@ -60,6 +61,15 @@
         <p id="browseTip" class="swipe-tip">左右滑动查看 · 点头像可标记请假、去向或补照片</p>
       </section>
 
+      <section id="seatingView" class="view hidden">
+        <div class="section-heading seating-heading">
+          <div><p id="seatingDate" class="eyebrow"></p><h2>按座位找人</h2></div>
+          <span id="seatingCount"></span>
+        </div>
+        <section id="seatingBoard" class="seating-board" aria-label="班级座位表"></section>
+        <p id="seatingNotice" class="swipe-tip">点击头像查看学生详情</p>
+      </section>
+
       <section id="dutyView" class="view hidden">
         <div class="duty-head">
           <div><p id="dateLabel" class="eyebrow"></p><h2 id="dutyTitle">今日值日</h2></div>
@@ -83,7 +93,7 @@
         <section class="archive-card">
           <label class="archive-toggle"><span><strong>自动留存每日统计</strong><small>状态跨日延续，直到你主动修改</small></span><input id="autoArchive" type="checkbox" checked><i aria-hidden="true"></i></label>
           <p id="archiveStatus">正在读取留存记录…</p>
-          <div class="archive-actions"><button id="saveToday" class="secondary-button" type="button">保存今日</button><button id="openHistory" class="secondary-button" type="button">日后回溯</button><button id="exportHistory" class="primary-button" type="button">导出全部记录</button></div>
+          <div class="archive-actions"><button id="saveToday" class="secondary-button" type="button">保存今日</button><button id="openHistory" class="secondary-button" type="button">日后回溯</button><button id="exportTodayDuty" class="secondary-button" type="button">导出今日 JS</button><button id="exportHistory" class="primary-button" type="button">导出全部记录</button></div>
         </section>
         <div id="whereSummary" class="where-summary"></div>
         <div id="whereGroups" class="where-groups"></div>
@@ -105,9 +115,10 @@
       <section class="data-block"><h3>学生头像总库</h3><p>包含全班姓名、拼音和照片。可整包导入、备份或换机。</p><div class="data-actions"><label class="secondary-button file-button">导入总库<input id="studentFile" type="file" accept=".js,text/javascript,application/javascript"></label><button id="exportStudents" class="secondary-button" type="button">导出总库</button></div></section>
       <section class="data-block"><h3>每周值日 JS</h3><p id="dutyDataStatus">尚未导入</p><div class="data-actions"><label class="secondary-button file-button">替换值日<input id="dutyFile" type="file" accept=".js,text/javascript,application/javascript"></label><button id="exportDuty" class="secondary-button" type="button">导出当前</button></div></section>
       <section class="data-block"><h3>宿舍成员 JS</h3><p id="dormDataStatus">尚未导入</p><div class="data-actions"><label class="secondary-button file-button">替换宿舍<input id="dormFile" type="file" accept=".js,text/javascript,application/javascript"></label><button id="exportDorm" class="secondary-button" type="button">导出当前</button></div></section>
+      <section class="data-block"><h3>座位表 JS</h3><p id="seatingDataStatus">尚未导入</p><div class="data-actions"><label class="secondary-button file-button">替换座位表<input id="seatingFile" type="file" accept=".js,text/javascript,application/javascript"></label><button id="exportSeating" class="secondary-button" type="button">导出当前</button></div></section>
       <section class="data-block"><h3>学生管理记录</h3><p id="managementDataStatus">第一印象、违纪与值日责任只保存在本机</p><div class="data-actions"><label class="secondary-button file-button">导入备份<input id="managementFile" type="file" accept=".js,text/javascript,application/javascript"></label><button id="exportManagement" class="secondary-button" type="button">导出备份</button></div></section>
       <button id="forgetData" class="text-button danger full" type="button">清除本机全部数据</button>
-      <p class="fineprint">各数据包彼此独立。替换值日、宿舍或管理记录不会改动学生照片。</p>
+      <p class="fineprint">各数据包彼此独立。替换值日、宿舍、座位表或管理记录不会改动学生照片。</p>
     </form>
   </dialog>
 
@@ -196,6 +207,6 @@
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=20260917-2" defer></script>
+  <script src="app.js?v=20260920-1" defer></script>
 </body>
 </html>

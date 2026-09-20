@@ -52,7 +52,7 @@ main { max-width: 920px; margin: 0 auto; padding: 12px 0 calc(36px + env(safe-ar
 .secondary-button { color: var(--green); background: var(--green-2); }
 .fineprint { font-size: 12px !important; color: var(--muted); }
 
-.mode-switch { position: sticky; top: 8px; z-index: 20; display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin: 4px 12px 16px; padding: 4px; border: 1px solid var(--line); border-radius: 17px; background: rgba(245,241,232,.88); backdrop-filter: blur(18px); }
+.mode-switch { position: sticky; top: 8px; z-index: 20; display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; margin: 4px 8px 16px; padding: 4px; border: 1px solid var(--line); border-radius: 17px; background: rgba(245,241,232,.88); backdrop-filter: blur(18px); }
 .mode { position: relative; min-height: 42px; padding: 0 4px; border: 0; border-radius: 13px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 720; }
 .mode.active { color: #fff; background: var(--green); box-shadow: 0 5px 14px rgba(31,91,70,.22); }
 .count { position: absolute; top: 1px; right: 1px; display: inline-grid; place-items: center; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 10px; color: var(--green); background: #fff; font-size: 10px; }
@@ -101,6 +101,23 @@ main { max-width: 920px; margin: 0 auto; padding: 12px 0 calc(36px + env(safe-ar
 .student-rail.grid-view .empty { grid-column: 1 / -1; }
 .empty { margin: 10px 20px; padding: 26px 18px; border: 1px dashed var(--line); border-radius: 20px; color: var(--muted); text-align: center; }
 .swipe-tip { margin: -12px 20px 0; color: var(--muted); font-size: 12px; text-align: center; }
+
+.seating-heading { align-items: center; }
+.seating-board { margin: 0 8px 18px; padding: 12px 6px 10px; border: 1px solid var(--line); border-radius: 23px; background: rgba(255,253,248,.9); box-shadow: 0 10px 30px rgba(42,49,43,.08); }
+.seating-stage { margin: 0 5px 11px; padding: 6px; border: 1px solid rgba(31,91,70,.28); border-radius: 10px; color: var(--green); background: var(--green-2); font-size: 11px; font-weight: 800; text-align: center; letter-spacing: .22em; }
+.seating-groups { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 5px; align-items: start; }
+.seating-pair { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 3px; min-width: 0; }
+.seat-person, .seat-empty { min-width: 0; min-height: 62px; border-radius: 11px; }
+.seat-person { position: relative; display: flex; padding: 3px 1px 4px; align-items: center; flex-direction: column; border: 1px solid rgba(23,32,29,.09); background: #f4f1ea; text-align: center; }
+.seat-person img { width: 36px; height: 36px; border-radius: 10px; object-fit: cover; background: var(--green-2); }
+.seat-person strong { display: block; width: 100%; overflow: hidden; margin-top: 3px; font-size: 9px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.seat-person .seat-status { position: absolute; top: 1px; right: 1px; width: 9px; height: 9px; border: 2px solid #fff; border-radius: 50%; background: var(--amber); }
+.seat-person .seat-status.status-in { display: none; }
+.seat-empty { border: 1px dashed rgba(23,32,29,.08); background: rgba(245,241,232,.38); }
+.seating-front { display: grid; grid-template-columns: 1fr 1.3fr 1fr; gap: 7px; margin: 10px 5px 0; align-items: end; }
+.seating-front::before, .seating-front::after { content: ""; height: 1px; background: var(--line); }
+.seating-front span { padding: 5px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); font-size: 10px; font-weight: 750; text-align: center; }
+.seating-board + .swipe-tip { margin-top: -8px; }
 
 .duty-head { align-items: center; }
 .duty-head select { padding: 9px 30px 9px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--white); }
@@ -297,6 +314,12 @@ dialog p { color: var(--muted); line-height: 1.6; }
   .duty-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
   .duty-group { margin: 0; }
   .dorm-list { grid-template-columns: repeat(2,1fr); }
+  .seating-board { max-width: 620px; margin-right: auto; margin-left: auto; padding: 18px 12px 14px; }
+  .seating-groups { gap: 12px; }
+  .seating-pair { gap: 7px; }
+  .seat-person { min-height: 82px; padding-top: 6px; }
+  .seat-person img { width: 52px; height: 52px; border-radius: 15px; }
+  .seat-person strong { font-size: 12px; }
   .person-dialog { width: min(94vw, 760px); height: min(94dvh, 920px); margin: auto; border-radius: 30px; }
 }
 
