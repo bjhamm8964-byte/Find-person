@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="styles.css?v=20260920-1">
+  <link rel="stylesheet" href="styles.css?v=20260920-2">
 </head>
 <body>
   <header class="topbar">
@@ -44,10 +44,11 @@
           <input id="searchInput" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="none" placeholder="姓名 / 拼音 / 首字母，如 wjx">
           <button id="clearSearch" type="button" aria-label="清空搜索">×</button>
         </label>
-        <div id="genderFilters" class="gender-filters" aria-label="按性别筛选">
+        <div id="genderFilters" class="gender-filters" aria-label="筛选学生">
           <button class="gender-filter active" type="button" data-gender="all" aria-pressed="true">全部</button>
           <button class="gender-filter" type="button" data-gender="男" aria-pressed="false">男</button>
           <button class="gender-filter" type="button" data-gender="女" aria-pressed="false">女</button>
+          <button class="gender-filter" type="button" data-gender="cadre" aria-pressed="false">班干</button>
         </div>
         <p id="searchHint" class="search-hint">支持姓名、拼音和首字母</p>
       </section>
@@ -64,10 +65,10 @@
       <section id="seatingView" class="view hidden">
         <div class="section-heading seating-heading">
           <div><p id="seatingDate" class="eyebrow"></p><h2>按座位找人</h2></div>
-          <span id="seatingCount"></span>
+          <div class="seating-tools"><span id="seatingCount"></span><button id="seatingEditToggle" class="layout-toggle" type="button">调整座位</button><button id="seatingExportQuick" class="layout-toggle" type="button">导出 JS</button></div>
         </div>
         <section id="seatingBoard" class="seating-board" aria-label="班级座位表"></section>
-        <p id="seatingNotice" class="swipe-tip">点击头像查看学生详情</p>
+        <p id="seatingNotice" class="swipe-tip">点击姓名查看学生详情</p>
       </section>
 
       <section id="dutyView" class="view hidden">
@@ -176,7 +177,7 @@
           </div>
           <div class="advancement-placeholder"><span>升学可能性</span><strong id="advancementLevel">待段考数据</strong></div>
           <p id="latestDiscipline" class="latest-discipline"></p>
-          <div class="management-actions"><button id="editImpression" class="secondary-button" type="button">第一印象</button><button id="addDiscipline" class="primary-button" type="button">登记违纪</button></div>
+          <div class="management-actions management-actions-three"><button id="toggleCadre" class="secondary-button" type="button">设为班干</button><button id="editImpression" class="secondary-button" type="button">第一印象</button><button id="addDiscipline" class="primary-button" type="button">登记违纪</button></div>
         </div>
         <div id="impressionEditor" class="management-editor hidden">
           <p class="picker-title">第一印象 · 最多选 3 个</p>
@@ -207,6 +208,6 @@
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=20260920-1" defer></script>
+  <script src="app.js?v=20260920-2" defer></script>
 </body>
 </html>
