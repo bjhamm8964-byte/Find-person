@@ -8,6 +8,7 @@ const STATUS_ORDER = ["在班", "请假", "宿舍", "医务室", "办公室", "�
 const IMPRESSION_OPTIONS = ["主动执行","提醒后完成","需反复确认","直接交代有效","宜单独交代","当众提醒易抵触","状态稳定","容易分心","情绪波动","劳动积极","组织能力","同伴影响明显"];
 const DISCIPLINE_TYPES = ["课堂","作业","宿舍","卫生","安全","其他"];
 const DISCIPLINE_LEVELS = ["轻微","一般","严重"];
+const CADRE_ROLES = ["班长","副班长","学习委员","劳动委员","纪律委员","体育委员","生活委员","课代表"];
 const DUTY_ROLES = [
   { id: "floor", label: "教室走廊委员", description: "扫拖、擦窗扶手与收尾" },
   { id: "zone1", label: "1号区委员", description: "1号区点名与验收" },
@@ -29,8 +30,8 @@ const ids = [
   "setup","app","studentSetupFile","dataButton","dataDialog","dataStatus","dutyDataStatus","dormDataStatus","seatingDataStatus","managementDataStatus","studentFile","dutyFile","dormFile","seatingFile","managementFile","exportStudents","exportDuty","exportDorm","exportSeating","exportManagement","forgetData",
   "searchPanel","searchInput","clearSearch","searchHint","genderFilters","findView","seatingView","dutyView","dormView","whereView","batchView","studentRail","resultTitle","resultCount","layoutToggle","browseTip","batchCount","seatingDate","seatingCount","seatingBoard","seatingNotice","seatingEditToggle","seatingExportQuick",
   "dateLabel","dutyTitle","daySelect","dutyWeekNotice","dutyList","dutyTeamButton","commissionerStrip","dutyDebtList","commissionerDialog","commissionerRoleButtons","commissionerSearch","clearCommissioner","commissionerCandidates","dutyActionDialog","dutyActionEyebrow","dutyActionTitle","dutyActionHint","dutyActionCandidates","saveDutyAction","dormTitle","dormCount","dormList","whereDate","whereSummary","whereGroups","resetWhere","autoArchive","archiveStatus","saveToday","openHistory","exportTodayDuty","exportHistory","historyDialog","historyDay","historySummary","historyRecords","historyExport",
-  "pickedList","batchNote","copyBatch","clearBatch","personDialog","personHero","personName","personPhoto","personPinyin","personDorm","personPrev","personNext","personPick","togglePersonEditor","personEditor","closePersonEditor","personStatus","personStatusButtons","leaveUntilWrap","leaveUntil","personNote","personPhotoFile","savePerson",
-  "personManagement","closeManagement","managementTitle","managementSummaryView","impressionSummary","managementNote","leaveCount","awayCount","disciplineCount","disciplineLevel","advancementLevel","latestDiscipline","toggleCadre","editImpression","addDiscipline","impressionEditor","impressionButtons","managementNoteInput","cancelImpression","saveImpression","disciplineEditor","disciplineTypeButtons","disciplineSeverityButtons","disciplineFact","cancelDiscipline","saveDiscipline","toast"
+  "pickedList","batchNote","copyBatch","clearBatch","personDialog","personHero","personName","personPhoto","personPinyin","personRole","personDorm","personPrev","personNext","personPick","togglePersonEditor","personEditor","closePersonEditor","personStatus","personStatusButtons","leaveUntilWrap","leaveUntil","personNote","personPhotoFile","savePerson",
+  "personManagement","closeManagement","managementTitle","managementSummaryView","impressionSummary","managementNote","leaveCount","awayCount","disciplineCount","disciplineLevel","advancementLevel","latestDiscipline","toggleCadre","editImpression","addDiscipline","cadreEditor","cadreRoleButtons","cadreRoleInput","removeCadre","cancelCadre","saveCadre","impressionEditor","impressionButtons","managementNoteInput","cancelImpression","saveImpression","disciplineEditor","disciplineTypeButtons","disciplineSeverityButtons","disciplineFact","cancelDiscipline","saveDiscipline","toast"
 ];
 const els = Object.fromEntries(ids.map((id) => [id, $(id)]));
 
@@ -305,6 +306,7 @@ function profileFor(name) {
     impressionTags: Array.isArray(profile.impressionTags) ? profile.impressionTags.filter((tag) => IMPRESSION_OPTIONS.includes(tag)).slice(0,3) : [],
     workNote: String(profile.workNote || ""),
     isCadre: profile.isCadre === true,
+    cadreRole: String(profile.cadreRole || "").trim().slice(0,20),
     discipline: Array.isArray(profile.discipline) ? profile.discipline : [],
     advancement: profile.advancement || null,
     updatedAt: profile.updatedAt || "",
@@ -328,6 +330,7 @@ function highestDisciplineLevel(records) {
 }
 function setManagementView(view = "summary") {
   els.managementSummaryView.classList.toggle("hidden", view !== "summary");
+  els.cadreEditor.classList.toggle("hidden", view !== "cadre");
   els.impressionEditor.classList.toggle("hidden", view !== "impression");
   els.disciplineEditor.classList.toggle("hidden", view !== "discipline");
 }
@@ -335,7 +338,7 @@ function renderManagementSummary() {
   const name = state.currentPerson; if (!name) return;
   const profile = profileFor(name); const counts = whereaboutsCounts(name); const discipline = profile.discipline;
   els.managementTitle.textContent = `${name} · 管理摘要`;
-  els.toggleCadre.textContent = profile.isCadre ? "取消班干" : "设为班干";
+  els.toggleCadre.textContent = profile.isCadre ? (profile.cadreRole || "编辑班干") : "设为班干";
   els.toggleCadre.classList.toggle("selected", profile.isCadre);
   els.impressionSummary.replaceChildren();
   if (profile.impressionTags.length) profile.impressionTags.forEach((tag) => { const chip = document.createElement("span"); chip.className = "impression-chip"; chip.textContent = tag; els.impressionSummary.append(chip); });
@@ -347,6 +350,29 @@ function renderManagementSummary() {
   const latest = [...discipline].sort((a,b) => String(b.at).localeCompare(String(a.at)))[0];
   const latestDate = latest?.at ? localDateKey(new Date(latest.at)) : "";
   els.latestDiscipline.textContent = latest ? `最近记录：${latestDate} · ${latest.type} · ${latest.level}${latest.fact ? ` · ${latest.fact}` : ""}` : "暂无违纪记录";
+}
+function renderCadreRolePicker() {
+  const current = els.cadreRoleInput.value.trim();
+  els.cadreRoleButtons.replaceChildren();
+  CADRE_ROLES.forEach((role) => {
+    const button = document.createElement("button"); button.type = "button"; button.className = `quick-option${role === current ? " selected" : ""}`; button.textContent = role;
+    button.addEventListener("click", () => { els.cadreRoleInput.value = role; renderCadreRolePicker(); });
+    els.cadreRoleButtons.append(button);
+  });
+}
+function openCadreEditor() {
+  const profile = profileFor(state.currentPerson); els.cadreRoleInput.value = profile.cadreRole;
+  els.removeCadre.classList.toggle("hidden", !profile.isCadre); renderCadreRolePicker(); setManagementView("cadre");
+}
+async function saveCadre() {
+  const name = state.currentPerson; if (!name) return;
+  const profile = profileFor(name); profile.isCadre = true; profile.cadreRole = els.cadreRoleInput.value.trim() || "班干"; profile.updatedAt = new Date().toISOString(); state.management[name] = profile;
+  await dbSet("management-v1",state.management); renderManagementSummary(); setManagementView("summary"); showViewerRole(name); renderStudents(); renderDataStatus(); toast(`已保存 ${name} · ${profile.cadreRole}`);
+}
+async function removeCadreRole() {
+  const name = state.currentPerson; if (!name) return;
+  const profile = profileFor(name); profile.isCadre = false; profile.cadreRole = ""; profile.updatedAt = new Date().toISOString(); state.management[name] = profile;
+  await dbSet("management-v1",state.management); renderManagementSummary(); setManagementView("summary"); showViewerRole(name); renderStudents(); renderDataStatus(); toast(`已取消 ${name} 的班干身份`);
 }
 function renderImpressionPicker() {
   els.impressionButtons.replaceChildren();
@@ -672,10 +698,14 @@ function showViewerPerson(index) {
   const name = state.viewerNames[state.viewerIndex]; const student = studentByName(name); if (!student) return;
   state.currentPerson = name; state.pendingPhoto = null;
   els.personManagement.classList.add("hidden"); setManagementView("summary");
-  const dorm = dormFor(name); const status = statusFor(name); els.personName.textContent = name; els.personPhoto.src = imageFor(student); els.personPhoto.alt = name; els.personPinyin.textContent = student.pinyin || ""; els.personDorm.textContent = `${status}${student.origin ? ` · ${student.origin}` : ""}${dorm ? ` · ${dorm.room.room}${dorm.member.bed ? ` · ${dorm.member.bed}` : ""}` : " · 未登记宿舍"}`;
+  const dorm = dormFor(name); const status = statusFor(name); els.personName.textContent = name; els.personPhoto.src = imageFor(student); els.personPhoto.alt = name; els.personPinyin.textContent = student.pinyin || ""; showViewerRole(name); els.personDorm.textContent = `${status}${student.origin ? ` · ${student.origin}` : ""}${dorm ? ` · ${dorm.room.room}${dorm.member.bed ? ` · ${dorm.member.bed}` : ""}` : " · 未登记宿舍"}`;
   els.personStatus.value = status === "待确认" ? "请假" : status; els.leaveUntil.value = state.leaves[name]?.until || ""; els.personNote.value = noteFor(name); renderStatusPicker(); toggleLeaveField();
   els.personPrev.disabled = state.viewerIndex === 0; els.personNext.disabled = state.viewerIndex === state.viewerNames.length - 1;
   els.personPick.textContent = state.picked.has(name) ? "已加入点人" : "加入点人"; els.personPick.classList.toggle("picked", state.picked.has(name));
+}
+function showViewerRole(name) {
+  const profile = profileFor(name); const label = profile.isCadre ? (profile.cadreRole || "班干") : "";
+  els.personRole.textContent = label; els.personRole.classList.toggle("hidden", !label);
 }
 function openPerson(name, contextNames = null) {
   const student = studentByName(name); if (!student) return toast(`名册中没有 ${name}`);
@@ -767,7 +797,8 @@ els.personNext.addEventListener("click", () => { els.personEditor.classList.add(
 els.personPick.addEventListener("click", () => { const index = state.viewerIndex; togglePick(state.currentPerson); showViewerPerson(index); });
 els.togglePersonEditor.addEventListener("click", () => { els.personManagement.classList.add("hidden"); els.personEditor.classList.remove("hidden"); }); els.closePersonEditor.addEventListener("click", () => els.personEditor.classList.add("hidden"));
 els.closeManagement.addEventListener("click", () => els.personManagement.classList.add("hidden"));
-els.toggleCadre.addEventListener("click", async () => { const name = state.currentPerson; if (!name) return; const profile = profileFor(name); profile.isCadre = !profile.isCadre; profile.updatedAt = new Date().toISOString(); state.management[name] = profile; await dbSet("management-v1",state.management); renderManagementSummary(); renderStudents(); renderDataStatus(); toast(profile.isCadre ? `已设 ${name} 为班干` : `已取消 ${name} 的班干标记`); });
+els.toggleCadre.addEventListener("click", openCadreEditor);
+els.cadreRoleInput.addEventListener("input", renderCadreRolePicker); els.cancelCadre.addEventListener("click", () => setManagementView("summary")); els.saveCadre.addEventListener("click", saveCadre); els.removeCadre.addEventListener("click", removeCadreRole);
 els.editImpression.addEventListener("click", () => { const profile = profileFor(state.currentPerson); state.impressionDraft = [...profile.impressionTags]; els.managementNoteInput.value = profile.workNote; renderImpressionPicker(); setManagementView("impression"); });
 els.cancelImpression.addEventListener("click", () => setManagementView("summary")); els.saveImpression.addEventListener("click", saveImpression);
 els.addDiscipline.addEventListener("click", () => { state.disciplineTypeDraft = "课堂"; state.disciplineLevelDraft = "轻微"; els.disciplineFact.value = ""; renderDisciplinePickers(); setManagementView("discipline"); });
