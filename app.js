@@ -19,7 +19,7 @@ const placeholderImage = "data:image/svg+xml;charset=utf-8," + encodeURIComponen
 const state = {
   studentsPack: null, duty: null, dorm: null, seating: null, whereabouts: {}, leaves: {},
   history: {}, autoArchive: true, management: {}, dutyOps: { commissioners: {}, days: {}, debts: {} },
-  mode: "find", query: "", genderFilter: "all", findLayout: localStorage.getItem("find-person-layout") === "grid" ? "grid" : "cards", seatingEdit: false, currentPerson: null, pendingPhoto: null,
+  mode: "find", query: "", genderFilter: "all", findLayout: localStorage.getItem("find-person-layout") === "grid" ? "grid" : "cards", seatingEdit: false, seatingPerspective: "teacher", currentPerson: null, pendingPhoto: null,
   impressionDraft: [], disciplineTypeDraft: "课堂", disciplineLevelDraft: "轻微",
   commissionerRole: "floor", dutyAction: null, dutyActionSelection: new Set(),
   viewerNames: [], viewerIndex: 0,
@@ -27,8 +27,8 @@ const state = {
 };
 const $ = (id) => document.getElementById(id);
 const ids = [
-  "setup","app","studentSetupFile","dataButton","dataDialog","dataStatus","dutyDataStatus","dormDataStatus","seatingDataStatus","managementDataStatus","studentFile","dutyFile","dormFile","seatingFile","managementFile","exportStudents","exportDuty","exportDorm","exportSeating","exportManagement","forgetData",
-  "searchPanel","searchInput","clearSearch","searchHint","genderFilters","findView","seatingView","dutyView","dormView","whereView","batchView","studentRail","resultTitle","resultCount","layoutToggle","browseTip","batchCount","seatingDate","seatingCount","seatingBoard","seatingNotice","seatingEditToggle","seatingExportQuick",
+  "setup","app","studentSetupFile","seatingSetupPrintFile","dataButton","dataDialog","dataStatus","dutyDataStatus","dormDataStatus","seatingDataStatus","managementDataStatus","studentFile","dutyFile","dormFile","seatingFile","managementFile","exportStudents","exportDuty","exportDorm","exportSeating","exportManagement","forgetData",
+  "searchPanel","searchInput","clearSearch","searchHint","genderFilters","findView","seatingView","dutyView","dormView","whereView","batchView","studentRail","resultTitle","resultCount","layoutToggle","browseTip","batchCount","seatingDate","seatingCount","seatingBoard","seatingNotice","seatingEditToggle","seatingExportQuick","seatingPrintFile","seatingPrintButton","seatingPerspectiveToggle","seatingPrintTitle","seatingPrintMeta","seatingPrintInstruction",
   "dateLabel","dutyTitle","daySelect","dutyWeekNotice","dutyList","dutyTeamButton","commissionerStrip","dutyDebtList","commissionerDialog","commissionerRoleButtons","commissionerSearch","clearCommissioner","commissionerCandidates","dutyActionDialog","dutyActionEyebrow","dutyActionTitle","dutyActionHint","dutyActionCandidates","saveDutyAction","dormTitle","dormCount","dormList","whereDate","whereSummary","whereGroups","resetWhere","autoArchive","archiveStatus","saveToday","openHistory","exportTodayDuty","exportHistory","historyDialog","historyDay","historySummary","historyRecords","historyExport",
   "pickedList","batchNote","copyBatch","clearBatch","personDialog","personHero","personName","personPhoto","personPinyin","personRole","personDorm","personPrev","personNext","personPick","togglePersonEditor","personEditor","closePersonEditor","personStatus","personStatusButtons","leaveUntilWrap","leaveUntil","personNote","personPhotoFile","savePerson",
   "personManagement","closeManagement","managementTitle","managementSummaryView","impressionSummary","managementNote","leaveCount","awayCount","disciplineCount","disciplineLevel","advancementLevel","latestDiscipline","toggleCadre","editImpression","addDiscipline","cadreEditor","cadreRoleButtons","cadreRoleInput","removeCadre","cancelCadre","saveCadre","impressionEditor","impressionButtons","managementNoteInput","cancelImpression","saveImpression","disciplineEditor","disciplineTypeButtons","disciplineSeverityButtons","disciplineFact","cancelDiscipline","saveDiscipline","toast"
@@ -123,9 +123,9 @@ async function importDataFile(file, expectedKind = "auto") {
     state.picked = new Set([...state.picked].filter((name) => studentByName(name)));
     persistPicked(); renderAll();
     if (state.studentsPack && state.autoArchive) await saveDailySnapshot("数据更新");
-    els.dataDialog.close(); toast(`已导入 ${file.name}`);
-  } catch (error) { toast(error.message || "导入失败"); }
-  finally { [els.studentSetupFile,els.studentFile,els.dutyFile,els.dormFile,els.seatingFile,els.managementFile].forEach((input) => { input.value = ""; }); }
+    els.dataDialog.close(); toast(`已导入 ${file.name}`); return true;
+  } catch (error) { toast(error.message || "导入失败"); return false; }
+  finally { [els.studentSetupFile,els.seatingSetupPrintFile,els.studentFile,els.dutyFile,els.dormFile,els.seatingFile,els.seatingPrintFile,els.managementFile].forEach((input) => { input.value = ""; }); }
 }
 
 async function exportJS(variable, payload, filename) {
@@ -457,26 +457,44 @@ function renderSeating() {
     els.seatingNotice.textContent = "请在数据管理中导入 seating-data.js";
     els.seatingBoard.append(emptyNode("暂无座位表")); return;
   }
+  const studentView = state.seatingPerspective === "student";
   const allNames = seatingNames(); const matchedNames = allNames.filter((name) => studentByName(name));
-  const unmatched = allNames.filter((name) => !studentByName(name));
+  const unmatched = state.studentsPack ? allNames.filter((name) => !studentByName(name)) : [];
   els.seatingDate.textContent = state.seating.dateLabel || state.seating.date || "已导入座位表";
   els.seatingCount.textContent = `${allNames.length} 个座位`;
+  els.seatingPrintTitle.textContent = studentView ? `${state.seating.className || state.studentsPack?.className || "班级"}自习纪律记录` : `${state.seating.className || state.studentsPack?.className || "班级"}临时座位表`;
+  els.seatingPrintMeta.textContent = studentView ? "日期：____年____月____日　自习：第____节　记录人：________" : `调整日期：${state.seating.dateLabel || state.seating.date || "未注明"}　座位方向：讲台在下方`;
+  els.seatingPrintInstruction.textContent = studentView ? "请在吵闹区域画圈；只圈位置，不写原因。" : "";
+  els.seatingPerspectiveToggle.textContent = studentView ? "教师视角" : "学生视角";
+  els.seatingPerspectiveToggle.classList.toggle("active", studentView);
+  els.seatingPerspectiveToggle.setAttribute("aria-pressed", String(studentView));
   els.seatingEditToggle.textContent = state.seatingEdit ? "完成调整" : "调整座位";
   els.seatingEditToggle.classList.toggle("active", state.seatingEdit);
+  els.seatingEditToggle.disabled = studentView;
   els.seatingBoard.classList.toggle("editing", state.seatingEdit);
-  els.seatingNotice.textContent = unmatched.length ? `${unmatched.length} 个姓名未匹配名册，请核对座位表` : state.seatingEdit ? "按住姓名拖到另一座位即可互换，修改自动保存在本机" : "点击姓名查看详情 · 红框表示当前不在班";
-  const back = document.createElement("div"); back.className = "seating-stage"; back.textContent = "教室后方"; els.seatingBoard.append(back);
+  els.seatingBoard.classList.toggle("student-perspective", studentView);
+  els.seatingNotice.textContent = studentView ? "学生视角：打印后交给纪律委员圈出吵闹区域" : unmatched.length ? `${unmatched.length} 个姓名未匹配名册，请核对座位表` : state.seatingEdit ? "按住姓名拖到另一座位即可互换，修改自动保存在本机" : state.studentsPack ? "点击姓名查看详情 · 红框表示当前不在班" : "座位表已就绪，可直接打印或另存为 PDF";
+  const back = document.createElement("div"); back.className = `seating-stage${studentView ? " student-stage-front" : ""}`; back.textContent = studentView ? "讲台（教室前方）" : "教室后方"; els.seatingBoard.append(back);
   const groups = document.createElement("div"); groups.className = "seating-groups";
-  state.seating.groups.forEach((group, groupIndex) => {
+  const displayGroups = state.seating.groups.map((group, groupIndex) => ({ group, groupIndex }));
+  if (studentView) displayGroups.reverse();
+  displayGroups.forEach(({ group, groupIndex }) => {
     const card = document.createElement("section"); card.className = "seating-group"; card.setAttribute("aria-label", `第${groupIndex + 1}大组`);
     const title = document.createElement("h3"); title.textContent = `第${groupIndex + 1}大组`; card.append(title);
     const pair = document.createElement("div"); pair.className = "seating-pair";
-    (group.rows || []).forEach((row, rowIndex) => {
-      [row?.[0] || "", row?.[1] || ""].forEach((name, columnIndex) => pair.append(seatNode(name, groupIndex, rowIndex, columnIndex, matchedNames)));
+    const displayRows = (group.rows || []).map((row, rowIndex) => ({ row, rowIndex }));
+    if (studentView) displayRows.reverse();
+    displayRows.forEach(({ row, rowIndex }) => {
+      const displaySeats = [
+        { name: row?.[0] || "", columnIndex: 0 },
+        { name: row?.[1] || "", columnIndex: 1 },
+      ];
+      if (studentView) displaySeats.reverse();
+      displaySeats.forEach(({ name, columnIndex }) => pair.append(seatNode(name, groupIndex, rowIndex, columnIndex, matchedNames)));
     });
     card.append(pair); groups.append(card);
   });
-  const front = document.createElement("div"); front.className = "seating-front"; front.innerHTML = "<span>讲台</span>";
+  const front = document.createElement("div"); front.className = `seating-front${studentView ? " seating-rear" : ""}`; front.innerHTML = `<span>${studentView ? "教室后方" : "讲台"}</span>`;
   els.seatingBoard.append(groups, front);
 }
 
@@ -487,7 +505,7 @@ function seatNode(name, groupIndex, rowIndex, columnIndex, matchedNames) {
   if (!name) { button.setAttribute("aria-label", "空座位"); button.innerHTML = "<span>空位</span>"; return button; }
   button.setAttribute("aria-label", `${name}，${status}`);
   button.innerHTML = `<strong>${name}</strong>${status !== "在班" ? `<span>${status}</span>` : ""}`;
-  button.addEventListener("click", () => { if (!state.seatingEdit) openPerson(name, matchedNames); });
+  button.addEventListener("click", () => { if (!state.seatingEdit && state.seatingPerspective !== "student") openPerson(name, matchedNames); });
   button.addEventListener("pointerdown", startSeatDrag);
   return button;
 }
@@ -496,7 +514,7 @@ function seatPosition(node) { return [Number(node.dataset.group), Number(node.da
 function seatValue([groupIndex,rowIndex,columnIndex]) { return state.seating.groups[groupIndex].rows[rowIndex][columnIndex] || ""; }
 function setSeatValue([groupIndex,rowIndex,columnIndex], value) { state.seating.groups[groupIndex].rows[rowIndex][columnIndex] = value; }
 function startSeatDrag(event) {
-  if (!state.seatingEdit || !event.currentTarget.classList.contains("seat-person")) return;
+  if (state.seatingPerspective === "student" || !state.seatingEdit || !event.currentTarget.classList.contains("seat-person")) return;
   event.preventDefault(); const source = event.currentTarget; const startX = event.clientX; const startY = event.clientY; let target = null;
   source.classList.add("dragging");
   const targetAt = (clientX,clientY) => { source.style.pointerEvents = "none"; const found = document.elementFromPoint(clientX,clientY)?.closest("[data-group][data-row][data-column]"); source.style.pointerEvents = ""; return found; };
@@ -771,7 +789,8 @@ function renderDataStatus() {
   els.managementDataStatus.textContent = `${managed} 人有管理记录 · 违纪 ${incidents} 条 · 值日待办 ${dutyDebtCount} 次 · 仅存本机`;
 }
 function renderAll() {
-  const ready = Boolean(state.studentsPack); els.setup.classList.toggle("hidden",ready); els.app.classList.toggle("hidden",!ready); els.dataButton.classList.toggle("hidden",!ready); if (!ready) return;
+  const ready = Boolean(state.studentsPack || state.seating); els.setup.classList.toggle("hidden",ready); els.app.classList.toggle("hidden",!ready); els.dataButton.classList.toggle("hidden",!ready); if (!ready) return;
+  if (!state.studentsPack && state.seating) state.mode = "seating";
   persistPicked(); renderDataStatus(); renderStudents(); renderSeating(); renderDuty(); renderDorm(); renderWhere(); renderPicked(); renderArchiveStatus(); setMode(state.mode);
 }
 let toastTimer; function toast(message) { els.toast.textContent = message; els.toast.classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(() => els.toast.classList.remove("show"),2200); }
@@ -781,7 +800,21 @@ els.searchInput.addEventListener("input", (e) => { state.query = e.target.value.
 els.genderFilters.addEventListener("click", (event) => { const button = event.target.closest("[data-gender]"); if (!button) return; state.genderFilter = button.dataset.gender; renderStudents(); });
 els.layoutToggle.addEventListener("click", () => { state.findLayout = state.findLayout === "grid" ? "cards" : "grid"; localStorage.setItem("find-person-layout",state.findLayout); renderStudents(); });
 els.seatingEditToggle.addEventListener("click", () => { if (!state.seating) return toast("请先导入座位表 JS"); state.seatingEdit = !state.seatingEdit; renderSeating(); });
+els.seatingPerspectiveToggle.addEventListener("click", () => { if (!state.seating) return toast("请先导入座位表 JS"); state.seatingEdit = false; state.seatingPerspective = state.seatingPerspective === "student" ? "teacher" : "student"; renderSeating(); });
 els.seatingExportQuick.addEventListener("click", () => exportJS("FIND_PERSON_SEATING_DATA",state.seating,`seating-data-${state.seating?.date || TODAY}.js`));
+els.seatingPrintButton.addEventListener("click", () => { if (!state.seating) return toast("请先导入座位表 JS"); window.print(); });
+els.seatingPrintFile.addEventListener("change", async (event) => {
+  const imported = await importDataFile(event.target.files[0],"seating");
+  if (!imported) return;
+  setMode("seating");
+  requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
+});
+els.seatingSetupPrintFile.addEventListener("change", async (event) => {
+  const imported = await importDataFile(event.target.files[0],"seating");
+  if (!imported) return;
+  setMode("seating");
+  requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
+});
 els.dutyTeamButton.addEventListener("click", () => openCommissionerDialog("floor")); els.commissionerSearch.addEventListener("input",renderCommissionerCandidates);
 els.clearCommissioner.addEventListener("click", async () => { state.dutyOps.commissioners[state.commissionerRole] = null; await persistDutyOps(); renderCommissionerRoles(); renderCommissionerCandidates(); renderCommissioners(); renderDataStatus(); toast("该岗位已设为空缺，可随时换人"); });
 els.saveDutyAction.addEventListener("click",saveDutyInspection);

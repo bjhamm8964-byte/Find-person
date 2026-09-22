@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="styles.css?v=20260920-2">
+  <link rel="stylesheet" href="styles.css?v=20260922-3">
 </head>
 <body>
   <header class="topbar">
@@ -25,6 +25,7 @@
       <h2>导入学生头像总库</h2>
       <p>首次导入 <strong>students-data.js</strong>。姓名和照片保存在本机，不上传到网页服务器。</p>
       <label class="primary-button file-button">选择学生头像总库<input id="studentSetupFile" type="file" accept=".js,text/javascript,application/javascript"></label>
+      <label class="secondary-button file-button setup-print-button">仅导入座位表并打印<input id="seatingSetupPrintFile" type="file" accept=".js,text/javascript,application/javascript"></label>
       <p class="fineprint">旧版 private-data.js 也可以直接导入，系统会自动拆分。</p>
     </section>
 
@@ -63,9 +64,14 @@
       </section>
 
       <section id="seatingView" class="view hidden">
+        <header class="seating-print-header" aria-hidden="true">
+          <h1 id="seatingPrintTitle">班级临时座位表</h1>
+          <p id="seatingPrintMeta"></p>
+          <p id="seatingPrintInstruction" class="seating-print-instruction"></p>
+        </header>
         <div class="section-heading seating-heading">
           <div><p id="seatingDate" class="eyebrow"></p><h2>按座位找人</h2></div>
-          <div class="seating-tools"><span id="seatingCount"></span><button id="seatingEditToggle" class="layout-toggle" type="button">调整座位</button><button id="seatingExportQuick" class="layout-toggle" type="button">导出 JS</button></div>
+          <div class="seating-tools"><span id="seatingCount"></span><button id="seatingPerspectiveToggle" class="layout-toggle" type="button">学生视角</button><label class="layout-toggle file-button">导入并打印<input id="seatingPrintFile" type="file" accept=".js,text/javascript,application/javascript"></label><button id="seatingPrintButton" class="layout-toggle" type="button">打印 / PDF</button><button id="seatingEditToggle" class="layout-toggle" type="button">调整座位</button><button id="seatingExportQuick" class="layout-toggle" type="button">导出 JS</button></div>
         </div>
         <section id="seatingBoard" class="seating-board" aria-label="班级座位表"></section>
         <p id="seatingNotice" class="swipe-tip">点击姓名查看学生详情</p>
@@ -216,6 +222,6 @@
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=20260921-1" defer></script>
+  <script src="app.js?v=20260922-2" defer></script>
 </body>
 </html>
