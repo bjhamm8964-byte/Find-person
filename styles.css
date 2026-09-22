@@ -285,6 +285,15 @@ dialog p { color: var(--muted); line-height: 1.6; }
 .viewer-action { min-height: 52px; border: 1px solid rgba(255,255,255,.2); border-radius: 17px; color: #fff; background: rgba(255,255,255,.08); font-weight: 780; }
 .viewer-action.primary { border-color: var(--green); background: var(--green); }
 .viewer-action.picked { color: #173f31; border-color: #dce9df; background: #dce9df; }
+.person-stability { padding: 10px 16px 2px; background: #0a0f0d; }
+.person-stability > span, .batch-stability > p { display: block; margin: 0 0 7px; color: rgba(255,255,255,.62); font-size: 11px; font-weight: 750; letter-spacing: .04em; }
+.stability-picker { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; }
+.stability-option { min-height: 40px; padding: 5px 4px; border: 1px solid rgba(255,255,255,.2); border-radius: 12px; color: #fff; background: rgba(255,255,255,.08); font-size: 12px; font-weight: 750; }
+.stability-option.selected { border-color: #8fc5ad; color: #173f31; background: #dce9df; }
+.stability-option[data-value="unstable"].selected { border-color: #e4c378; color: #5c4209; background: #f6e7b9; }
+.stability-option[data-value="long_absent"].selected { border-color: #efaaa1; color: #6d211b; background: #f8d5d0; }
+.batch-stability { margin: 14px 20px 0; padding: 14px; border-radius: 17px; background: #1a2721; }
+.batch-stability > p { color: rgba(255,255,255,.72); }
 .person-management { position: absolute; z-index: 6; inset: 0; display: flex; min-height: 100%; padding: calc(22px + env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom)); overflow-y: auto; flex-direction: column; color: #fff; background: linear-gradient(180deg,rgba(5,12,9,.69),rgba(7,18,13,.78)); backdrop-filter: blur(8px) saturate(.82); -webkit-backdrop-filter: blur(8px) saturate(.82); }
 .management-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: clamp(22px,5vh,48px); }
 .management-head small { display: block; margin-bottom: 4px; color: rgba(255,255,255,.62); font-size: 11px; letter-spacing: .08em; }

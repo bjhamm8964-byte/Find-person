@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="styles.css?v=20260922-3">
+  <link rel="stylesheet" href="styles.css?v=20260922-4">
 </head>
 <body>
   <header class="topbar">
@@ -100,7 +100,7 @@
         <section class="archive-card">
           <label class="archive-toggle"><span><strong>自动留存每日统计</strong><small>状态跨日延续，直到你主动修改</small></span><input id="autoArchive" type="checkbox" checked><i aria-hidden="true"></i></label>
           <p id="archiveStatus">正在读取留存记录…</p>
-          <div class="archive-actions"><button id="saveToday" class="secondary-button" type="button">保存今日</button><button id="openHistory" class="secondary-button" type="button">日后回溯</button><button id="exportTodayDuty" class="secondary-button" type="button">导出今日 JS</button><button id="exportHistory" class="primary-button" type="button">导出全部记录</button></div>
+          <div class="archive-actions"><button id="saveToday" class="secondary-button" type="button">保存今日</button><button id="openHistory" class="secondary-button" type="button">日后回溯</button><button id="exportTodayDuty" class="secondary-button" type="button">导出今日 JS</button><button id="exportDutyLink" class="secondary-button" type="button">导出值日联动 JS</button><button id="exportHistory" class="primary-button" type="button">导出全部记录</button></div>
         </section>
         <div id="whereSummary" class="where-summary"></div>
         <div id="whereGroups" class="where-groups"></div>
@@ -110,6 +110,10 @@
         <div class="section-heading"><div><p class="eyebrow">临时点名组</p><h2>要交代的人</h2></div><button id="clearBatch" class="text-button danger" type="button">清空</button></div>
         <textarea id="batchNote" rows="3" placeholder="备注要交代的事情"></textarea>
         <div id="pickedList" class="picked-list"></div>
+        <section class="batch-stability">
+          <p>批量设置出勤稳定性</p>
+          <div id="batchStabilityButtons" class="stability-picker" aria-label="批量设置出勤稳定性"></div>
+        </section>
         <div class="batch-actions"><button id="copyBatch" class="primary-button" type="button">复制名单与备注</button></div>
       </section>
     </div>
@@ -171,6 +175,10 @@
           <p id="personDorm"></p>
         </div>
       </div>
+      <section class="person-stability" aria-label="出勤稳定性">
+        <span>出勤稳定性</span>
+        <div id="personStabilityButtons" class="stability-picker"></div>
+      </section>
       <section id="personManagement" class="person-management hidden" aria-label="学生管理摘要">
         <div class="management-head"><div><small>全屏快速一览</small><h3 id="managementTitle">管理摘要</h3></div><button id="closeManagement" type="button" aria-label="关闭管理摘要">×</button></div>
         <div id="managementSummaryView">
@@ -222,6 +230,6 @@
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=20260922-2" defer></script>
+  <script src="app.js?v=20260922-3" defer></script>
 </body>
 </html>
