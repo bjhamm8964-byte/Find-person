@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="styles.css?v=20260922-4">
+  <link rel="stylesheet" href="styles.css?v=20260922-5">
 </head>
 <body>
   <header class="topbar">
@@ -57,7 +57,7 @@
       <section id="findView" class="view">
         <div class="section-heading">
           <h2 id="resultTitle">全班同学</h2>
-          <div class="result-tools"><span id="resultCount"></span><button id="layoutToggle" class="layout-toggle" type="button">网格一览</button></div>
+          <div class="result-tools"><span id="resultCount"></span><select id="studentSort" class="layout-toggle sort-select" aria-label="学生排序"><option value="default">默认排序</option><option value="leave-desc">请假：多到少</option><option value="leave-asc">请假：少到多</option><option value="discipline-desc">违纪：多到少</option><option value="discipline-asc">违纪：少到多</option><option value="contribution-desc">贡献：多到少</option><option value="contribution-asc">贡献：少到多</option></select><button id="layoutToggle" class="layout-toggle" type="button">网格一览</button></div>
         </div>
         <div id="studentRail" class="student-rail"></div>
         <p id="browseTip" class="swipe-tip">左右滑动查看 · 点头像可标记请假、去向或补照片</p>
@@ -186,7 +186,7 @@
           <p id="managementNote" class="management-note"></p>
           <div class="management-stats">
             <div><strong id="leaveCount">0</strong><span>请假</span></div>
-            <div><strong id="awayCount">0</strong><span>离校</span></div>
+            <div><strong id="contributionCount">0</strong><span>贡献</span></div>
             <div><strong id="disciplineCount">0</strong><span>违纪</span></div>
             <div><strong id="disciplineLevel">无</strong><span>最高程度</span></div>
           </div>
@@ -208,9 +208,12 @@
           <div class="management-actions"><button id="cancelImpression" class="secondary-button" type="button">返回</button><button id="saveImpression" class="primary-button" type="button">保存</button></div>
         </div>
         <div id="disciplineEditor" class="management-editor hidden">
-          <p class="picker-title">违纪类型</p><div id="disciplineTypeButtons" class="quick-picker"></div>
-          <p class="picker-title">程度</p><div id="disciplineSeverityButtons" class="quick-picker severity-picker"></div>
-          <label class="compact-field">事实（可不填）<input id="disciplineFact" type="text" maxlength="50" placeholder="只写发生的事实"></label>
+          <p class="picker-title">记录类型</p><div id="managementRecordKindButtons" class="quick-picker record-kind-picker"></div>
+          <div id="disciplineOnlyFields">
+            <p class="picker-title">违纪类型</p><div id="disciplineTypeButtons" class="quick-picker"></div>
+            <p class="picker-title">程度</p><div id="disciplineSeverityButtons" class="quick-picker severity-picker"></div>
+          </div>
+          <label class="compact-field"><span id="recordFactLabel">事实（可不填）</span><input id="disciplineFact" type="text" maxlength="50" placeholder="只写发生的事实"></label>
           <div class="management-actions"><button id="cancelDiscipline" class="secondary-button" type="button">返回</button><button id="saveDiscipline" class="primary-button" type="button">保存记录</button></div>
         </div>
       </section>
@@ -230,6 +233,6 @@
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=20260922-3" defer></script>
+  <script src="app.js?v=20260922-4" defer></script>
 </body>
 </html>

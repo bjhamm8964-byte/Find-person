@@ -72,6 +72,7 @@ main { max-width: 920px; margin: 0 auto; padding: 12px 0 calc(36px + env(safe-ar
 .section-heading > span { color: var(--muted); font-size: 13px; }
 .result-tools { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 13px; }
 .layout-toggle { min-height: 34px; padding: 0 11px; border: 1px solid var(--line); border-radius: 11px; color: var(--green); background: rgba(255,253,248,.82); font-size: 12px; font-weight: 760; }
+.sort-select { max-width: 116px; padding-right: 7px; outline: 0; }
 
 .student-rail { display: grid; grid-auto-flow: column; grid-auto-columns: min(76vw, 330px); gap: 14px; overflow-x: auto; padding: 3px 20px 25px; scroll-snap-type: x mandatory; scrollbar-width: none; }
 .student-rail::-webkit-scrollbar { display: none; }
@@ -329,6 +330,8 @@ dialog p { color: var(--muted); line-height: 1.6; }
 .management-danger { min-height: 46px; margin-top: 14px; border: 1px solid rgba(255,145,134,.45); border-radius: 14px; color: #ffd5cf; background: rgba(162,59,50,.28); font-size: 13px; font-weight: 750; }
 .severity-picker .quick-option[data-value="一般"].selected { border-color: #946515; background: #946515; }
 .severity-picker .quick-option[data-value="严重"].selected { border-color: var(--danger); background: var(--danger); }
+.record-kind-picker { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.record-kind-picker .quick-option[data-value="contribution"].selected { border-color: #d4ad4e; color: #493508; background: #f3d98c; }
 .compact-field { display: grid; gap: 7px; margin-top: 14px; color: rgba(255,255,255,.68); font-size: 12px; font-weight: 700; }
 .compact-field input { width: 100%; min-height: 48px; padding: 0 13px; border: 1px solid rgba(255,255,255,.22); border-radius: 14px; color: #fff; background: rgba(255,255,255,.11); font-size: 13px; outline: 0; }
 .compact-field input::placeholder { color: rgba(255,255,255,.45); }

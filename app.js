@@ -24,8 +24,8 @@ const placeholderImage = "data:image/svg+xml;charset=utf-8," + encodeURIComponen
 const state = {
   studentsPack: null, duty: null, dorm: null, seating: null, whereabouts: {}, leaves: {},
   history: {}, autoArchive: true, management: {}, dutyOps: { commissioners: {}, days: {}, debts: {} },
-  mode: "find", query: "", genderFilter: "all", findLayout: localStorage.getItem("find-person-layout") === "grid" ? "grid" : "cards", seatingEdit: false, seatingPerspective: "teacher", currentPerson: null, pendingPhoto: null,
-  impressionDraft: [], disciplineTypeDraft: "课堂", disciplineLevelDraft: "轻微",
+  mode: "find", query: "", genderFilter: "all", findLayout: localStorage.getItem("find-person-layout") === "grid" ? "grid" : "cards", studentSort: localStorage.getItem("find-person-student-sort") || "default", seatingEdit: false, seatingPerspective: "teacher", currentPerson: null, pendingPhoto: null,
+  impressionDraft: [], recordKindDraft: "discipline", disciplineTypeDraft: "课堂", disciplineLevelDraft: "轻微",
   commissionerRole: "floor", dutyAction: null, dutyActionSelection: new Set(),
   viewerNames: [], viewerIndex: 0,
   picked: new Set(JSON.parse(localStorage.getItem("find-person-picked") || "[]")),
@@ -33,10 +33,10 @@ const state = {
 const $ = (id) => document.getElementById(id);
 const ids = [
   "setup","app","studentSetupFile","seatingSetupPrintFile","dataButton","dataDialog","dataStatus","dutyDataStatus","dormDataStatus","seatingDataStatus","managementDataStatus","studentFile","dutyFile","dormFile","seatingFile","managementFile","exportStudents","exportDuty","exportDorm","exportSeating","exportManagement","forgetData",
-  "searchPanel","searchInput","clearSearch","searchHint","genderFilters","findView","seatingView","dutyView","dormView","whereView","batchView","studentRail","resultTitle","resultCount","layoutToggle","browseTip","batchCount","seatingDate","seatingCount","seatingBoard","seatingNotice","seatingEditToggle","seatingExportQuick","seatingPrintFile","seatingPrintButton","seatingPerspectiveToggle","seatingPrintTitle","seatingPrintMeta","seatingPrintInstruction",
+  "searchPanel","searchInput","clearSearch","searchHint","genderFilters","findView","seatingView","dutyView","dormView","whereView","batchView","studentRail","resultTitle","resultCount","studentSort","layoutToggle","browseTip","batchCount","seatingDate","seatingCount","seatingBoard","seatingNotice","seatingEditToggle","seatingExportQuick","seatingPrintFile","seatingPrintButton","seatingPerspectiveToggle","seatingPrintTitle","seatingPrintMeta","seatingPrintInstruction",
   "dateLabel","dutyTitle","daySelect","dutyWeekNotice","dutyList","dutyTeamButton","commissionerStrip","dutyDebtList","commissionerDialog","commissionerRoleButtons","commissionerSearch","clearCommissioner","commissionerCandidates","dutyActionDialog","dutyActionEyebrow","dutyActionTitle","dutyActionHint","dutyActionCandidates","saveDutyAction","dormTitle","dormCount","dormList","whereDate","whereSummary","whereGroups","resetWhere","autoArchive","archiveStatus","saveToday","openHistory","exportTodayDuty","exportDutyLink","exportHistory","historyDialog","historyDay","historySummary","historyRecords","historyExport",
   "pickedList","batchNote","copyBatch","clearBatch","batchStabilityButtons","personDialog","personHero","personName","personPhoto","personPinyin","personRole","personDorm","personPrev","personNext","personPick","togglePersonEditor","personStabilityButtons","personEditor","closePersonEditor","personStatus","personStatusButtons","leaveUntilWrap","leaveUntil","personNote","personPhotoFile","savePerson",
-  "personManagement","closeManagement","managementTitle","managementSummaryView","impressionSummary","managementNote","leaveCount","awayCount","disciplineCount","disciplineLevel","advancementLevel","latestDiscipline","toggleCadre","editImpression","addDiscipline","cadreEditor","cadreRoleButtons","cadreRoleInput","removeCadre","cancelCadre","saveCadre","impressionEditor","impressionButtons","managementNoteInput","cancelImpression","saveImpression","disciplineEditor","disciplineTypeButtons","disciplineSeverityButtons","disciplineFact","cancelDiscipline","saveDiscipline","toast"
+  "personManagement","closeManagement","managementTitle","managementSummaryView","impressionSummary","managementNote","leaveCount","contributionCount","disciplineCount","disciplineLevel","advancementLevel","latestDiscipline","toggleCadre","editImpression","addDiscipline","cadreEditor","cadreRoleButtons","cadreRoleInput","removeCadre","cancelCadre","saveCadre","impressionEditor","impressionButtons","managementNoteInput","cancelImpression","saveImpression","disciplineEditor","managementRecordKindButtons","disciplineOnlyFields","disciplineTypeButtons","disciplineSeverityButtons","recordFactLabel","disciplineFact","cancelDiscipline","saveDiscipline","toast"
 ];
 const els = Object.fromEntries(ids.map((id) => [id, $(id)]));
 
@@ -186,7 +186,11 @@ function filteredStudents() {
   const candidates = activeStudents().filter((student) => state.genderFilter === "all" || (state.genderFilter === "cadre" ? profileFor(student.name).isCadre : student.gender === state.genderFilter));
   const ranked = candidates.map((student, index) => ({ student, index, score: scoreStudent(student, state.query) })).sort((a,b) => b.score - a.score || a.index - b.index);
   const confident = ranked.filter((item) => item.score >= 45);
-  return (confident.length ? confident : ranked.filter((item) => item.score > 0)).map((item) => item.student);
+  const visible = confident.length ? confident : ranked.filter((item) => item.score > 0);
+  if (state.studentSort === "default") return visible.map((item) => item.student);
+  const [metric, direction] = state.studentSort.split("-"); const factor = direction === "asc" ? 1 : -1;
+  const countFor = (name) => metric === "leave" ? whereaboutsCounts(name).leave : metric === "discipline" ? profileFor(name).discipline.length : profileFor(name).contributions.length;
+  return visible.sort((a,b) => factor * (countFor(a.student.name) - countFor(b.student.name)) || b.score - a.score || a.student.name.localeCompare(b.student.name,"zh-CN")).map((item) => item.student);
 }
 
 function statusFor(name) {
@@ -354,6 +358,7 @@ function profileFor(name) {
     isCadre: profile.isCadre === true,
     cadreRole: String(profile.cadreRole || "").trim().slice(0,20),
     discipline: Array.isArray(profile.discipline) ? profile.discipline : [],
+    contributions: Array.isArray(profile.contributions) ? profile.contributions : [],
     advancement: profile.advancement || null,
     attendanceStability,
     updatedAt: profile.updatedAt || "",
@@ -409,7 +414,7 @@ function setManagementView(view = "summary") {
 }
 function renderManagementSummary() {
   const name = state.currentPerson; if (!name) return;
-  const profile = profileFor(name); const counts = whereaboutsCounts(name); const discipline = profile.discipline;
+  const profile = profileFor(name); const counts = whereaboutsCounts(name); const discipline = profile.discipline; const contributions = profile.contributions;
   els.managementTitle.textContent = `${name} · 管理摘要`;
   els.toggleCadre.textContent = profile.isCadre ? (profile.cadreRole || "编辑班干") : "设为班干";
   els.toggleCadre.classList.toggle("selected", profile.isCadre);
@@ -417,12 +422,12 @@ function renderManagementSummary() {
   if (profile.impressionTags.length) profile.impressionTags.forEach((tag) => { const chip = document.createElement("span"); chip.className = "impression-chip"; chip.textContent = tag; els.impressionSummary.append(chip); });
   else { const empty = document.createElement("span"); empty.className = "impression-empty"; empty.textContent = "尚未添加第一印象"; els.impressionSummary.append(empty); }
   els.managementNote.textContent = profile.workNote ? `工作提示：${profile.workNote}` : "";
-  els.leaveCount.textContent = counts.leave; els.awayCount.textContent = counts.away; els.disciplineCount.textContent = discipline.length;
+  els.leaveCount.textContent = counts.leave; els.contributionCount.textContent = contributions.length; els.disciplineCount.textContent = discipline.length;
   els.disciplineLevel.textContent = highestDisciplineLevel(discipline) || "无";
   els.advancementLevel.textContent = profile.advancement?.label || "待段考数据";
-  const latest = [...discipline].sort((a,b) => String(b.at).localeCompare(String(a.at)))[0];
+  const latest = [...discipline.map((record) => ({...record, recordKind:"违纪"})), ...contributions.map((record) => ({...record, recordKind:"贡献"}))].sort((a,b) => String(b.at).localeCompare(String(a.at)))[0];
   const latestDate = latest?.at ? localDateKey(new Date(latest.at)) : "";
-  els.latestDiscipline.textContent = latest ? `最近记录：${latestDate} · ${latest.type} · ${latest.level}${latest.fact ? ` · ${latest.fact}` : ""}` : "暂无违纪记录";
+  els.latestDiscipline.textContent = latest ? `最近记录：${latestDate} · ${latest.recordKind}${latest.type ? ` · ${latest.type}` : ""}${latest.level ? ` · ${latest.level}` : ""}${latest.fact ? ` · ${latest.fact}` : ""}` : "暂无违纪或贡献记录";
 }
 function renderCadreRolePicker() {
   const current = els.cadreRoleInput.value.trim();
@@ -468,6 +473,13 @@ function renderSinglePicker(container, options, selected, onSelect) {
   });
 }
 function renderDisciplinePickers() {
+  renderSinglePicker(els.managementRecordKindButtons, ["discipline","contribution"], state.recordKindDraft, (value) => { state.recordKindDraft = value; renderDisciplinePickers(); });
+  [...els.managementRecordKindButtons.children].forEach((button) => { button.textContent = button.dataset.value === "discipline" ? "违纪" : "贡献"; });
+  const contribution = state.recordKindDraft === "contribution";
+  els.disciplineOnlyFields.classList.toggle("hidden", contribution);
+  els.recordFactLabel.textContent = contribution ? "完成情况（可不填）" : "事实（可不填）";
+  els.disciplineFact.placeholder = contribution ? "如：按要求完成临时布置任务" : "只写发生的事实";
+  els.saveDiscipline.textContent = contribution ? "保存贡献" : "保存违纪";
   renderSinglePicker(els.disciplineTypeButtons, DISCIPLINE_TYPES, state.disciplineTypeDraft, (value) => { state.disciplineTypeDraft = value; renderDisciplinePickers(); });
   renderSinglePicker(els.disciplineSeverityButtons, DISCIPLINE_LEVELS, state.disciplineLevelDraft, (value) => { state.disciplineLevelDraft = value; renderDisciplinePickers(); });
 }
@@ -481,10 +493,13 @@ async function saveImpression() {
 }
 async function saveDiscipline() {
   const name = state.currentPerson; if (!name) return;
-  const profile = profileFor(name); profile.discipline.push({ id: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`, at: new Date().toISOString(), type: state.disciplineTypeDraft, level: state.disciplineLevelDraft, fact: els.disciplineFact.value.trim() }); profile.updatedAt = new Date().toISOString(); state.management[name] = profile;
-  await dbSet("management-v1", state.management); els.disciplineFact.value = ""; renderManagementSummary(); setManagementView("summary"); renderDataStatus(); toast("违纪记录已保存");
+  const profile = profileFor(name); const record = { id: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`, at: new Date().toISOString(), fact: els.disciplineFact.value.trim() };
+  if (state.recordKindDraft === "contribution") profile.contributions.push(record);
+  else profile.discipline.push({ ...record, type: state.disciplineTypeDraft, level: state.disciplineLevelDraft });
+  profile.updatedAt = new Date().toISOString(); state.management[name] = profile;
+  await dbSet("management-v1", state.management); els.disciplineFact.value = ""; renderManagementSummary(); setManagementView("summary"); renderDataStatus(); renderStudents(); toast(state.recordKindDraft === "contribution" ? "贡献记录已保存" : "违纪记录已保存");
 }
-function managementExportPayload() { return { version: 3, updatedAt: new Date().toISOString(), profiles: state.management, dutyOps: state.dutyOps }; }
+function managementExportPayload() { return { version: 4, updatedAt: new Date().toISOString(), profiles: state.management, dutyOps: state.dutyOps }; }
 function dutyExportPayload() { return state.duty ? { ...state.duty, commissioners: { ...state.dutyOps.commissioners } } : null; }
 
 function persistPicked() { localStorage.setItem("find-person-picked", JSON.stringify([...state.picked])); els.batchCount.textContent = state.picked.size ? String(state.picked.size) : ""; renderBatchStability(); }
@@ -506,9 +521,10 @@ function renderStudents() {
   if (!state.studentsPack) return; const list = filteredStudents();
   const batchSearch = state.mode === "batch";
   els.findView.classList.toggle("hidden", state.mode !== "find" && !(batchSearch && state.query));
+  els.studentSort.classList.toggle("hidden", state.mode !== "find");
   els.layoutToggle.classList.toggle("hidden", state.mode !== "find");
   els.studentRail.classList.toggle("grid-view", batchSearch || state.findLayout === "grid");
-  els.layoutToggle.textContent = state.findLayout === "grid" ? "大图滑动" : "网格一览";
+  els.studentSort.value = state.studentSort; els.layoutToggle.textContent = state.findLayout === "grid" ? "大图滑动" : "网格一览";
   els.browseTip.textContent = state.findLayout === "grid" ? "点照片查看详情" : "左右滑动查看 · 点头像可标记请假、去向或补照片";
   els.browseTip.classList.toggle("hidden", batchSearch);
   const genderLabel = state.genderFilter === "男" ? "男生" : state.genderFilter === "女" ? "女生" : state.genderFilter === "cadre" ? "班干" : "全班同学";
@@ -857,10 +873,11 @@ function renderDataStatus() {
   els.dutyDataStatus.textContent = state.duty ? `${state.duty.weekLabel || state.duty.weekStart || "已导入"} · 劳动委员 ${dutyRoleCount}/4` : "尚未导入";
   els.dormDataStatus.textContent = state.dorm ? `${state.dorm.rooms.length} 间宿舍 · ${state.dorm.rooms.reduce((n,r)=>n+r.members.length,0)} 人` : "尚未导入";
   els.seatingDataStatus.textContent = state.seating ? `${state.seating.dateLabel || state.seating.date || "已导入"} · ${seatingNames().length} 个座位` : "尚未导入";
-  const managed = Object.values(state.management).filter((profile) => profile?.isCadre || profile?.impressionTags?.length || profile?.workNote || profile?.discipline?.length || (profile?.attendanceStability && profile.attendanceStability !== "normal")).length;
+  const managed = Object.values(state.management).filter((profile) => profile?.isCadre || profile?.impressionTags?.length || profile?.workNote || profile?.discipline?.length || profile?.contributions?.length || (profile?.attendanceStability && profile.attendanceStability !== "normal")).length;
   const incidents = Object.values(state.management).reduce((count, profile) => count + (Array.isArray(profile?.discipline) ? profile.discipline.length : 0), 0);
+  const contributions = Object.values(state.management).reduce((count, profile) => count + (Array.isArray(profile?.contributions) ? profile.contributions.length : 0), 0);
   const dutyDebtCount = Object.values(state.dutyOps.debts).reduce((count,debt) => count + (debt?.makeup || 0) + (debt?.redo || 0),0);
-  els.managementDataStatus.textContent = `${managed} 人有管理记录 · 违纪 ${incidents} 条 · 值日待办 ${dutyDebtCount} 次 · 仅存本机`;
+  els.managementDataStatus.textContent = `${managed} 人有管理记录 · 违纪 ${incidents} 条 · 贡献 ${contributions} 条 · 值日待办 ${dutyDebtCount} 次 · 仅存本机`;
 }
 function renderAll() {
   const ready = Boolean(state.studentsPack || state.seating); els.setup.classList.toggle("hidden",ready); els.app.classList.toggle("hidden",!ready); els.dataButton.classList.toggle("hidden",!ready); if (!ready) return;
@@ -873,6 +890,7 @@ document.querySelectorAll(".mode").forEach((button) => button.addEventListener("
 els.searchInput.addEventListener("input", (e) => { state.query = e.target.value.trim(); renderStudents(); }); els.clearSearch.addEventListener("click", () => { state.query=""; els.searchInput.value=""; renderStudents(); els.searchInput.focus(); }); els.daySelect.addEventListener("change", () => renderDuty(els.daySelect.value));
 els.genderFilters.addEventListener("click", (event) => { const button = event.target.closest("[data-gender]"); if (!button) return; state.genderFilter = button.dataset.gender; renderStudents(); });
 els.layoutToggle.addEventListener("click", () => { state.findLayout = state.findLayout === "grid" ? "cards" : "grid"; localStorage.setItem("find-person-layout",state.findLayout); renderStudents(); });
+els.studentSort.addEventListener("change", () => { state.studentSort = els.studentSort.value; localStorage.setItem("find-person-student-sort",state.studentSort); renderStudents(); });
 els.seatingEditToggle.addEventListener("click", () => { if (!state.seating) return toast("请先导入座位表 JS"); state.seatingEdit = !state.seatingEdit; renderSeating(); });
 els.seatingPerspectiveToggle.addEventListener("click", () => { if (!state.seating) return toast("请先导入座位表 JS"); state.seatingEdit = false; state.seatingPerspective = state.seatingPerspective === "student" ? "teacher" : "student"; renderSeating(); });
 els.seatingExportQuick.addEventListener("click", () => exportJS("FIND_PERSON_SEATING_DATA",state.seating,`seating-data-${state.seating?.date || TODAY}.js`));
@@ -908,7 +926,7 @@ els.toggleCadre.addEventListener("click", openCadreEditor);
 els.cadreRoleInput.addEventListener("input", renderCadreRolePicker); els.cancelCadre.addEventListener("click", () => setManagementView("summary")); els.saveCadre.addEventListener("click", saveCadre); els.removeCadre.addEventListener("click", removeCadreRole);
 els.editImpression.addEventListener("click", () => { const profile = profileFor(state.currentPerson); state.impressionDraft = [...profile.impressionTags]; els.managementNoteInput.value = profile.workNote; renderImpressionPicker(); setManagementView("impression"); });
 els.cancelImpression.addEventListener("click", () => setManagementView("summary")); els.saveImpression.addEventListener("click", saveImpression);
-els.addDiscipline.addEventListener("click", () => { state.disciplineTypeDraft = "课堂"; state.disciplineLevelDraft = "轻微"; els.disciplineFact.value = ""; renderDisciplinePickers(); setManagementView("discipline"); });
+els.addDiscipline.addEventListener("click", () => { state.recordKindDraft = "discipline"; state.disciplineTypeDraft = "课堂"; state.disciplineLevelDraft = "轻微"; els.disciplineFact.value = ""; renderDisciplinePickers(); setManagementView("discipline"); });
 els.cancelDiscipline.addEventListener("click", () => setManagementView("summary")); els.saveDiscipline.addEventListener("click", saveDiscipline);
 let viewerTouchX = null; let viewerLastSwipe = 0;
 els.personHero.addEventListener("touchstart", (event) => { viewerTouchX = event.touches.length === 1 ? event.touches[0].clientX : null; }, { passive: true });
