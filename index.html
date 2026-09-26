@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="styles.css?v=20260922-5">
+  <link rel="stylesheet" href="styles.css?v=20260926-1">
 </head>
 <body>
   <header class="topbar">
@@ -96,7 +96,7 @@
       </section>
 
       <section id="whereView" class="view hidden">
-        <div class="section-heading"><div><p id="whereDate" class="eyebrow"></p><h2>全班去向</h2></div><button id="resetWhere" class="text-button" type="button">非请假全部回班</button></div>
+        <div class="section-heading"><div><p id="whereDate" class="eyebrow"></p><h2>全班去向</h2></div><div class="where-head-actions"><button id="copyWhereSummary" class="text-button" type="button">复制今日去向</button><button id="resetWhere" class="text-button" type="button">非请假全部回班</button></div></div>
         <section class="archive-card">
           <label class="archive-toggle"><span><strong>自动留存每日统计</strong><small>状态跨日延续，直到你主动修改</small></span><input id="autoArchive" type="checkbox" checked><i aria-hidden="true"></i></label>
           <p id="archiveStatus">正在读取留存记录…</p>
@@ -233,6 +233,6 @@
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=20260922-4" defer></script>
+  <script src="app.js?v=20260926-1" defer></script>
 </body>
 </html>
