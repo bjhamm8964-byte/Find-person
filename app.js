@@ -24,7 +24,7 @@ const placeholderImage = "data:image/svg+xml;charset=utf-8," + encodeURIComponen
 const state = {
   studentsPack: null, duty: null, dorm: null, seating: null, whereabouts: {}, leaves: {},
   history: {}, autoArchive: true, management: {}, dutyOps: { commissioners: {}, days: {}, debts: {} },
-  mode: "find", query: "", genderFilter: "all", findLayout: localStorage.getItem("find-person-layout") === "grid" ? "grid" : "cards", studentSort: localStorage.getItem("find-person-student-sort") || "default", seatingEdit: false, seatingPerspective: "teacher", currentPerson: null, pendingPhoto: null,
+  mode: "find", query: "", genderFilter: "all", findLayout: localStorage.getItem("find-person-layout") === "grid" ? "grid" : "cards", studentSort: localStorage.getItem("find-person-student-sort") || "default", pickMode: false, seatingEdit: false, seatingPerspective: "teacher", currentPerson: null, pendingPhoto: null,
   impressionDraft: [], recordKindDraft: "discipline", disciplineTypeDraft: "课堂", disciplineLevelDraft: "轻微",
   commissionerRole: "floor", dutyAction: null, dutyActionSelection: new Set(),
   viewerNames: [], viewerIndex: 0,
@@ -33,7 +33,7 @@ const state = {
 const $ = (id) => document.getElementById(id);
 const ids = [
   "setup","app","studentSetupFile","seatingSetupPrintFile","dataButton","dataDialog","dataStatus","dutyDataStatus","dormDataStatus","seatingDataStatus","managementDataStatus","studentFile","dutyFile","dormFile","seatingFile","managementFile","exportStudents","exportDuty","exportDorm","exportSeating","exportManagement","forgetData",
-  "searchPanel","searchInput","clearSearch","searchHint","genderFilters","findView","seatingView","dutyView","dormView","whereView","batchView","studentRail","resultTitle","resultCount","studentSort","layoutToggle","browseTip","batchCount","seatingDate","seatingCount","seatingBoard","seatingNotice","seatingEditToggle","seatingExportQuick","seatingPrintFile","seatingPrintButton","seatingPerspectiveToggle","seatingPrintTitle","seatingPrintMeta","seatingPrintInstruction",
+  "searchPanel","searchInput","clearSearch","searchHint","genderFilters","findView","seatingView","dutyView","dormView","whereView","batchView","studentRail","resultTitle","resultCount","studentSort","pickModeToggle","layoutToggle","browseTip","batchCount","seatingDate","seatingCount","seatingBoard","seatingNotice","seatingEditToggle","seatingExportQuick","seatingPrintFile","seatingPrintButton","seatingPerspectiveToggle","seatingPrintTitle","seatingPrintMeta","seatingPrintInstruction",
   "dateLabel","dutyTitle","daySelect","dutyWeekNotice","dutyList","dutyTeamButton","commissionerStrip","dutyDebtList","commissionerDialog","commissionerRoleButtons","commissionerSearch","clearCommissioner","commissionerCandidates","dutyActionDialog","dutyActionEyebrow","dutyActionTitle","dutyActionHint","dutyActionCandidates","saveDutyAction","dormTitle","dormCount","dormList","whereDate","whereSummary","whereGroups","copyWhereSummary","resetWhere","autoArchive","archiveStatus","saveToday","openHistory","exportTodayDuty","exportDutyLink","exportHistory","historyDialog","historyDay","historySummary","historyRecords","historyExport",
   "pickedList","batchNote","copyBatch","clearBatch","batchStabilityButtons","personDialog","personHero","personName","personPhoto","personPinyin","personRole","personDorm","personPrev","personNext","personPick","togglePersonEditor","personStabilityButtons","personEditor","closePersonEditor","personStatus","personStatusButtons","leaveUntilWrap","leaveUntil","personNote","personPhotoFile","savePerson",
   "personManagement","closeManagement","managementTitle","managementSummaryView","impressionSummary","managementNote","leaveCount","contributionCount","disciplineCount","disciplineLevel","advancementLevel","latestDiscipline","toggleCadre","editImpression","addDiscipline","cadreEditor","cadreRoleButtons","cadreRoleInput","removeCadre","cancelCadre","saveCadre","impressionEditor","impressionButtons","managementNoteInput","cancelImpression","saveImpression","disciplineEditor","managementRecordKindButtons","disciplineOnlyFields","disciplineTypeButtons","disciplineSeverityButtons","recordFactLabel","disciplineFact","cancelDiscipline","saveDiscipline","toast"
@@ -520,17 +520,28 @@ function studentCard(student) {
   card.setAttribute("aria-label", `${student.name}，${status}`);
   const meta = [student.pinyin, student.origin].filter(Boolean).join(" · ");
   card.innerHTML = `<img alt="${student.name}" src="${imageFor(student)}"><span class="gender-chip">${student.gender || "学生"}</span>${status !== "在班" ? `<span class="status-chip ${statusClass(status)}">${status}</span>` : ""}<span class="pick-mark">✓</span><span class="card-copy"><span class="card-name">${student.name}</span><span class="card-pinyin">${meta}</span></span>`;
-  card.addEventListener("click", () => state.mode === "batch" ? togglePick(student.name) : openPerson(student.name, filteredStudents().map((item) => item.name))); return card;
+  card.addEventListener("click", (event) => {
+    if (state.mode === "batch") return togglePick(student.name);
+    if (event.target.closest(".pick-mark")) {
+      if (!state.pickMode) return toast("请先开启点人模式");
+      return togglePick(student.name);
+    }
+    openPerson(student.name, filteredStudents().map((item) => item.name));
+  }); return card;
 }
 function renderStudents() {
   if (!state.studentsPack) return; const list = filteredStudents();
   const batchSearch = state.mode === "batch";
   els.findView.classList.toggle("hidden", state.mode !== "find" && !(batchSearch && state.query));
   els.studentSort.classList.toggle("hidden", state.mode !== "find");
+  els.pickModeToggle.classList.toggle("hidden", state.mode !== "find");
   els.layoutToggle.classList.toggle("hidden", state.mode !== "find");
   els.studentRail.classList.toggle("grid-view", batchSearch || state.findLayout === "grid");
+  els.studentRail.classList.toggle("pick-mode", state.mode === "find" && state.pickMode);
   els.studentSort.value = state.studentSort; els.layoutToggle.textContent = state.findLayout === "grid" ? "大图滑动" : "网格一览";
-  els.browseTip.textContent = state.findLayout === "grid" ? "点照片查看详情" : "左右滑动查看 · 点头像可标记请假、去向或补照片";
+  els.pickModeToggle.textContent = state.pickMode ? `完成点人${state.picked.size ? ` · ${state.picked.size}` : ""}` : "点人模式";
+  els.pickModeToggle.classList.toggle("active", state.pickMode); els.pickModeToggle.setAttribute("aria-pressed", String(state.pickMode));
+  els.browseTip.textContent = state.pickMode ? "点人物卡右上圆圈连续选择 · 点照片仍可查看详情" : state.findLayout === "grid" ? "点照片查看详情" : "左右滑动查看 · 点头像可标记请假、去向或补照片";
   els.browseTip.classList.toggle("hidden", batchSearch);
   const genderLabel = state.genderFilter === "男" ? "男生" : state.genderFilter === "女" ? "女生" : state.genderFilter === "cadre" ? "班干" : "全班同学";
   els.resultTitle.textContent = batchSearch ? "搜索结果" : (state.query ? `搜索“${state.query}”` : genderLabel); els.resultCount.textContent = `${list.length} 人`;
@@ -868,6 +879,7 @@ async function savePerson() { await persistPerson(true, false); }
 
 function setMode(mode) {
   if (mode === "batch" && state.mode !== "batch") { state.query = ""; els.searchInput.value = ""; }
+  if (mode !== "find") state.pickMode = false;
   state.mode = mode; document.querySelectorAll(".mode").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
   els.findView.classList.toggle("hidden", mode !== "find"); els.seatingView.classList.toggle("hidden", mode !== "seating"); els.dutyView.classList.toggle("hidden", mode !== "duty"); els.dormView.classList.toggle("hidden", mode !== "dorm"); els.whereView.classList.toggle("hidden", mode !== "where"); els.batchView.classList.toggle("hidden", mode !== "batch"); els.searchPanel.classList.toggle("hidden", !["find","batch"].includes(mode));
   if (mode === "seating") renderSeating(); if (mode === "duty") renderDuty(); if (mode === "dorm") renderDorm(); if (mode === "where") renderWhere(); if (mode === "find") renderStudents(); if (mode === "batch") { renderStudents(); renderPicked(); setTimeout(() => els.searchInput.focus(),50); }
@@ -895,6 +907,7 @@ document.querySelectorAll(".mode").forEach((button) => button.addEventListener("
 els.searchInput.addEventListener("input", (e) => { state.query = e.target.value.trim(); renderStudents(); }); els.clearSearch.addEventListener("click", () => { state.query=""; els.searchInput.value=""; renderStudents(); els.searchInput.focus(); }); els.daySelect.addEventListener("change", () => renderDuty(els.daySelect.value));
 els.genderFilters.addEventListener("click", (event) => { const button = event.target.closest("[data-gender]"); if (!button) return; state.genderFilter = button.dataset.gender; renderStudents(); });
 els.layoutToggle.addEventListener("click", () => { state.findLayout = state.findLayout === "grid" ? "cards" : "grid"; localStorage.setItem("find-person-layout",state.findLayout); renderStudents(); });
+els.pickModeToggle.addEventListener("click", () => { if (state.pickMode) { state.pickMode = false; setMode("batch"); return; } state.pickMode = true; renderStudents(); toast("点人物卡右上圆圈连续选人"); });
 els.studentSort.addEventListener("change", () => { state.studentSort = els.studentSort.value; localStorage.setItem("find-person-student-sort",state.studentSort); renderStudents(); });
 els.seatingEditToggle.addEventListener("click", () => { if (!state.seating) return toast("请先导入座位表 JS"); state.seatingEdit = !state.seatingEdit; renderSeating(); });
 els.seatingPerspectiveToggle.addEventListener("click", () => { if (!state.seating) return toast("请先导入座位表 JS"); state.seatingEdit = false; state.seatingPerspective = state.seatingPerspective === "student" ? "teacher" : "student"; renderSeating(); });
