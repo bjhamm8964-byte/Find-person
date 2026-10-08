@@ -9,11 +9,6 @@ const IMPRESSION_OPTIONS = ["主动执行","提醒后完成","需反复确认","
 const DISCIPLINE_TYPES = ["课堂","作业","宿舍","卫生","安全","其他"];
 const DISCIPLINE_LEVELS = ["轻微","一般","严重"];
 const CADRE_ROLES = ["班长","副班长","学习委员","劳动委员","纪律委员","体育委员","生活委员","课代表"];
-const ATTENDANCE_STABILITY_OPTIONS = [
-  { value: "normal", label: "普通" },
-  { value: "unstable", label: "出勤不稳定" },
-  { value: "long_absent", label: "长期不在校" },
-];
 const DUTY_ROLES = [
   { id: "floor", label: "教室走廊委员", description: "扫拖、擦窗扶手与收尾" },
   { id: "zone1", label: "1号区委员", description: "1号区点名与验收" },
@@ -34,8 +29,8 @@ const $ = (id) => document.getElementById(id);
 const ids = [
   "setup","app","studentSetupFile","seatingSetupPrintFile","dataButton","dataDialog","dataStatus","dutyDataStatus","dormDataStatus","seatingDataStatus","managementDataStatus","studentFile","dutyFile","dormFile","seatingFile","managementFile","exportStudents","exportDuty","exportDorm","exportSeating","exportManagement","forgetData",
   "searchPanel","searchInput","clearSearch","searchHint","genderFilters","findView","seatingView","dutyView","dormView","whereView","batchView","studentRail","resultTitle","resultCount","studentSort","pickModeToggle","layoutToggle","browseTip","batchCount","seatingDate","seatingCount","seatingBoard","seatingNotice","seatingEditToggle","seatingExportQuick","seatingPrintFile","seatingPrintButton","seatingPerspectiveToggle","seatingPrintTitle","seatingPrintMeta","seatingPrintInstruction",
-  "dateLabel","dutyTitle","daySelect","dutyWeekNotice","dutyList","dutyTeamButton","commissionerStrip","dutyDebtList","commissionerDialog","commissionerRoleButtons","commissionerSearch","clearCommissioner","commissionerCandidates","dutyActionDialog","dutyActionEyebrow","dutyActionTitle","dutyActionHint","dutyActionCandidates","saveDutyAction","dormTitle","dormCount","dormList","whereDate","whereSummary","whereGroups","copyWhereSummary","resetWhere","autoArchive","archiveStatus","saveToday","openHistory","exportTodayDuty","exportDutyLink","exportHistory","historyDialog","historyDay","historySummary","historyRecords","historyExport",
-  "pickedList","batchNote","copyBatch","clearBatch","batchStabilityButtons","personDialog","personHero","personName","personPhoto","personPinyin","personRole","personDorm","personPrev","personNext","personPick","togglePersonEditor","personStabilityButtons","personEditor","closePersonEditor","personStatus","personStatusButtons","leaveUntilWrap","leaveUntil","personNote","personPhotoFile","savePerson",
+  "dateLabel","dutyTitle","daySelect","dutyWeekNotice","dutyList","dutyTeamButton","commissionerStrip","dutyDebtList","commissionerDialog","commissionerRoleButtons","commissionerSearch","clearCommissioner","commissionerCandidates","dutyActionDialog","dutyActionEyebrow","dutyActionTitle","dutyActionHint","dutyActionCandidates","saveDutyAction","dormTitle","dormCount","dormList","whereDate","whereSummary","whereGroups","copyWhereSummary","resetWhere","autoArchive","archiveStatus","saveToday","openHistory","exportTodayDuty","exportHistory","historyDialog","historyDay","historySummary","historyRecords","historyExport",
+  "pickedList","batchNote","copyBatch","clearBatch","personDialog","personHero","personName","personPhoto","personPinyin","personRole","personDorm","personPrev","personNext","personPick","togglePersonEditor","personDutyParticipation","personDutyParticipationHint","personEditor","closePersonEditor","personStatus","personStatusButtons","leaveUntilWrap","leaveUntil","personNote","personPhotoFile","savePerson",
   "personManagement","closeManagement","managementTitle","managementSummaryView","impressionSummary","managementNote","leaveCount","contributionCount","disciplineCount","disciplineLevel","advancementLevel","latestDiscipline","toggleCadre","editImpression","addDiscipline","cadreEditor","cadreRoleButtons","cadreRoleInput","removeCadre","cancelCadre","saveCadre","impressionEditor","impressionButtons","managementNoteInput","cancelImpression","saveImpression","disciplineEditor","managementRecordKindButtons","disciplineOnlyFields","disciplineTypeButtons","disciplineSeverityButtons","recordFactLabel","disciplineFact","cancelDiscipline","saveDiscipline","toast"
 ];
 const els = Object.fromEntries(ids.map((id) => [id, $(id)]));
@@ -102,6 +97,17 @@ function validateSeating(payload) {
 }
 function validateManagement(payload) { if (!payload?.profiles || typeof payload.profiles !== "object" || Array.isArray(payload.profiles)) throw new Error("管理记录缺少 profiles"); }
 
+function migrateDutyParticipation(profiles) {
+  if (!profiles || typeof profiles !== "object" || Array.isArray(profiles)) return false;
+  let changed = false;
+  Object.values(profiles).forEach((profile) => {
+    if (!profile || typeof profile !== "object" || typeof profile.dutyParticipation === "boolean") return;
+    profile.dutyParticipation = profile.attendanceStability !== "long_absent";
+    changed = true;
+  });
+  return changed;
+}
+
 function normalizeDutyOps(value) {
   return {
     commissioners: value?.commissioners && typeof value.commissioners === "object" ? value.commissioners : {},
@@ -135,7 +141,7 @@ async function importDataFile(file, expectedKind = "auto") {
     } else if (variable === "FIND_PERSON_SEATING_DATA" && ["auto","seating"].includes(expectedKind)) {
       validateSeating(payload); state.seating = payload; await dbSet("seating", payload);
     } else if (variable === "FIND_PERSON_MANAGEMENT_DATA" && ["auto","management"].includes(expectedKind)) {
-      validateManagement(payload); state.management = payload.profiles; if (payload.dutyOps) state.dutyOps = normalizeDutyOps(payload.dutyOps); await Promise.all([dbSet("management-v1", state.management),dbSet("duty-ops-v1",state.dutyOps)]);
+      validateManagement(payload); state.management = payload.profiles; migrateDutyParticipation(state.management); if (payload.dutyOps) state.dutyOps = normalizeDutyOps(payload.dutyOps); await Promise.all([dbSet("management-v1", state.management),dbSet("duty-ops-v1",state.dutyOps)]);
     } else throw new Error("数据包类型与导入口不一致");
     state.picked = new Set([...state.picked].filter((name) => studentByName(name)));
     persistPicked(); renderAll();
@@ -223,10 +229,17 @@ function countStatuses(records = currentRecords()) {
     return counts;
   }, {});
 }
-function whereaboutsSummaryText(records = currentRecords()) {
+function formatCopyTime(date = new Date()) {
+  return `${String(date.getHours()).padStart(2,"0")}:${String(date.getMinutes()).padStart(2,"0")}`;
+}
+function whereaboutsSummaryText(records = currentRecords(), copiedAt = new Date()) {
   const absent = records.filter((record) => record.status !== "在班");
   const names = absent.length ? absent.map((record) => record.name).join("、") : "无";
-  return `本班在册人数${records.length}人，今日实到人数${records.length - absent.length}人，请假${absent.length}人，请假人员：${names}。`;
+  return `日期：${localDateKey(copiedAt)}\n更新时间：${formatCopyTime(copiedAt)}\n本班在册人数${records.length}人，今日实到人数${records.length - absent.length}人，请假${absent.length}人，请假人员：${names}。`;
+}
+function batchSummaryText(names, note = "") {
+  const cleanNote = String(note || "").trim();
+  return `人员：${names.join("、")}${cleanNote ? `\n事项：${cleanNote}` : ""}`;
 }
 function formatTime(iso) {
   if (!iso) return "";
@@ -325,38 +338,10 @@ async function exportTodayForDuty() {
   };
   await exportJS("FIND_PERSON_WHEREABOUTS_DATA", payload, `whereabouts-${TODAY}.js`);
 }
-async function exportDutyLinkData() {
-  if (!state.studentsPack) return toast("请先导入学生总库");
-  const records = students().map((student, index) => ({
-    studentId: String(student.studentId || student.id || `${String(state.studentsPack?.className || "class").replace(/班/g, "")}-${String(index + 1).padStart(3,"0")}`),
-    name: student.name,
-    status: statusFor(student.name),
-    leaveUntil: state.leaves[student.name]?.until || "",
-    note: noteFor(student.name),
-    attendanceStability: profileFor(student.name).attendanceStability,
-  }));
-  const payload = {
-    schemaVersion: 2,
-    className: state.studentsPack?.className || "班级",
-    date: TODAY,
-    exportedAt: localISOString(),
-    totalStudents: records.length,
-    presentStudents: records.filter((record) => record.status === "在班").length,
-    records,
-  };
-  await exportJS("FIND_PERSON_WHEREABOUTS_DATA", payload, `whereabouts-duty-${TODAY}.js`);
-}
-
-function localISOString(date = new Date()) {
-  const offset = -date.getTimezoneOffset();
-  const sign = offset >= 0 ? "+" : "-";
-  const pad = (value) => String(Math.abs(value)).padStart(2,"0");
-  return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}${sign}${pad(Math.trunc(offset/60))}:${pad(offset%60)}`;
-}
-
 function profileFor(name) {
   const profile = state.management[name] || {};
-  const attendanceStability = ATTENDANCE_STABILITY_OPTIONS.some((option) => option.value === profile.attendanceStability) ? profile.attendanceStability : "normal";
+  const attendanceStability = ["normal","unstable","long_absent"].includes(profile.attendanceStability) ? profile.attendanceStability : "normal";
+  const dutyParticipation = typeof profile.dutyParticipation === "boolean" ? profile.dutyParticipation : attendanceStability !== "long_absent";
   return {
     impressionTags: Array.isArray(profile.impressionTags) ? profile.impressionTags.filter((tag) => IMPRESSION_OPTIONS.includes(tag)).slice(0,3) : [],
     workNote: String(profile.workNote || ""),
@@ -366,34 +351,22 @@ function profileFor(name) {
     contributions: Array.isArray(profile.contributions) ? profile.contributions : [],
     advancement: profile.advancement || null,
     attendanceStability,
+    dutyParticipation,
     updatedAt: profile.updatedAt || "",
   };
 }
 
-function renderStabilityPicker(container, selected, onSelect) {
-  container.replaceChildren();
-  ATTENDANCE_STABILITY_OPTIONS.forEach((option) => {
-    const button = document.createElement("button"); button.type = "button"; button.dataset.value = option.value;
-    button.className = `stability-option${option.value === selected ? " selected" : ""}`; button.textContent = option.label;
-    button.addEventListener("click", () => onSelect(option.value)); container.append(button);
-  });
-}
-async function setAttendanceStability(names, value) {
-  const option = ATTENDANCE_STABILITY_OPTIONS.find((item) => item.value === value); if (!option) return;
-  const validNames = [...new Set(names)].filter((name) => studentByName(name)); if (!validNames.length) return toast("还没有选择学生");
-  validNames.forEach((name) => { const profile = profileFor(name); profile.attendanceStability = value; profile.updatedAt = new Date().toISOString(); state.management[name] = profile; });
-  await dbSet("management-v1", state.management); renderDataStatus(); renderStudents(); renderPicked();
-  if (state.currentPerson && validNames.includes(state.currentPerson)) renderPersonStability();
-  toast(validNames.length === 1 ? `已设为${option.label}` : `已将 ${validNames.length} 人设为${option.label}`);
-}
-function renderPersonStability() {
+function renderPersonDutyParticipation() {
   const name = state.currentPerson; if (!name) return;
-  renderStabilityPicker(els.personStabilityButtons, profileFor(name).attendanceStability, (value) => setAttendanceStability([name], value));
+  const participating = profileFor(name).dutyParticipation;
+  els.personDutyParticipation.checked = participating;
+  els.personDutyParticipationHint.textContent = participating ? "当前参加；普通请假不会自动暂停" : "当前暂停；可随时手动恢复";
 }
-function renderBatchStability() {
-  const values = [...state.picked].map((name) => profileFor(name).attendanceStability);
-  const selected = values.length && values.every((value) => value === values[0]) ? values[0] : "";
-  renderStabilityPicker(els.batchStabilityButtons, selected, (value) => setAttendanceStability([...state.picked], value));
+async function setDutyParticipation(name, participating) {
+  if (!name || !studentByName(name)) return;
+  const profile = profileFor(name); profile.dutyParticipation = Boolean(participating); profile.updatedAt = new Date().toISOString(); state.management[name] = profile;
+  await dbSet("management-v1", state.management); renderPersonDutyParticipation(); renderPicked(); renderDataStatus();
+  toast(profile.dutyParticipation ? "已恢复参加轮值" : "已暂停参加轮值");
 }
 function whereaboutsCounts(name) {
   let leave = 0; let away = 0;
@@ -504,10 +477,10 @@ async function saveDiscipline() {
   profile.updatedAt = new Date().toISOString(); state.management[name] = profile;
   await dbSet("management-v1", state.management); els.disciplineFact.value = ""; renderManagementSummary(); setManagementView("summary"); renderDataStatus(); renderStudents(); toast(state.recordKindDraft === "contribution" ? "贡献记录已保存" : "违纪记录已保存");
 }
-function managementExportPayload() { return { version: 4, updatedAt: new Date().toISOString(), profiles: state.management, dutyOps: state.dutyOps }; }
+function managementExportPayload() { return { version: 5, updatedAt: new Date().toISOString(), profiles: state.management, dutyOps: state.dutyOps }; }
 function dutyExportPayload() { return state.duty ? { ...state.duty, commissioners: { ...state.dutyOps.commissioners } } : null; }
 
-function persistPicked() { localStorage.setItem("find-person-picked", JSON.stringify([...state.picked])); els.batchCount.textContent = state.picked.size ? String(state.picked.size) : ""; renderBatchStability(); }
+function persistPicked() { localStorage.setItem("find-person-picked", JSON.stringify([...state.picked])); els.batchCount.textContent = state.picked.size ? String(state.picked.size) : ""; }
 function togglePick(name) {
   const adding = !state.picked.has(name); adding ? state.picked.add(name) : state.picked.delete(name);
   if (state.mode === "batch" && adding) { state.query = ""; els.searchInput.value = ""; }
@@ -520,12 +493,8 @@ function studentCard(student) {
   card.setAttribute("aria-label", `${student.name}，${status}`);
   const meta = [student.pinyin, student.origin].filter(Boolean).join(" · ");
   card.innerHTML = `<img alt="${student.name}" src="${imageFor(student)}"><span class="gender-chip">${student.gender || "学生"}</span>${status !== "在班" ? `<span class="status-chip ${statusClass(status)}">${status}</span>` : ""}<span class="pick-mark">✓</span><span class="card-copy"><span class="card-name">${student.name}</span><span class="card-pinyin">${meta}</span></span>`;
-  card.addEventListener("click", (event) => {
-    if (state.mode === "batch") return togglePick(student.name);
-    if (event.target.closest(".pick-mark")) {
-      if (!state.pickMode) return toast("请先开启点人模式");
-      return togglePick(student.name);
-    }
+  card.addEventListener("click", () => {
+    if (state.mode === "batch" || (state.mode === "find" && state.pickMode)) return togglePick(student.name);
     openPerson(student.name, filteredStudents().map((item) => item.name));
   }); return card;
 }
@@ -538,10 +507,15 @@ function renderStudents() {
   els.layoutToggle.classList.toggle("hidden", state.mode !== "find");
   els.studentRail.classList.toggle("grid-view", batchSearch || state.findLayout === "grid");
   els.studentRail.classList.toggle("pick-mode", state.mode === "find" && state.pickMode);
-  els.studentSort.value = state.studentSort; els.layoutToggle.textContent = state.findLayout === "grid" ? "大图滑动" : "网格一览";
-  els.pickModeToggle.textContent = state.pickMode ? `完成点人${state.picked.size ? ` · ${state.picked.size}` : ""}` : "点人模式";
+  els.studentSort.value = state.studentSort;
+  els.layoutToggle.textContent = state.findLayout === "grid" ? "🖼️" : "▦";
+  els.layoutToggle.setAttribute("aria-label", state.findLayout === "grid" ? "切换为大图滑动" : "切换为网格一览");
+  els.layoutToggle.title = state.findLayout === "grid" ? "大图滑动" : "网格一览";
+  els.pickModeToggle.textContent = state.pickMode ? (state.picked.size ? `✅ ${state.picked.size}` : "✅") : "☑️";
+  els.pickModeToggle.setAttribute("aria-label", state.pickMode ? `完成点人，已选${state.picked.size}人` : "开启点人模式");
+  els.pickModeToggle.title = state.pickMode ? `完成点人${state.picked.size ? `（${state.picked.size}人）` : ""}` : "点人模式";
   els.pickModeToggle.classList.toggle("active", state.pickMode); els.pickModeToggle.setAttribute("aria-pressed", String(state.pickMode));
-  els.browseTip.textContent = state.pickMode ? "点人物卡右上圆圈连续选择 · 点照片仍可查看详情" : state.findLayout === "grid" ? "点照片查看详情" : "左右滑动查看 · 点头像可标记请假、去向或补照片";
+  els.browseTip.textContent = state.pickMode ? "点人物卡任意位置连续勾选" : state.findLayout === "grid" ? "点照片查看详情" : "左右滑动查看 · 点头像可标记请假、去向或补照片";
   els.browseTip.classList.toggle("hidden", batchSearch);
   const genderLabel = state.genderFilter === "男" ? "男生" : state.genderFilter === "女" ? "女生" : state.genderFilter === "cadre" ? "班干" : "全班同学";
   els.resultTitle.textContent = batchSearch ? "搜索结果" : (state.query ? `搜索“${state.query}”` : genderLabel); els.resultCount.textContent = `${list.length} 人`;
@@ -578,7 +552,7 @@ function renderSeating() {
   els.seatingEditToggle.disabled = studentView;
   els.seatingBoard.classList.toggle("editing", state.seatingEdit);
   els.seatingBoard.classList.toggle("student-perspective", studentView);
-  els.seatingNotice.textContent = studentView ? "学生视角：打印后交给纪律委员圈出吵闹区域" : unmatched.length ? `${unmatched.length} 个姓名未匹配名册，请核对座位表` : state.seatingEdit ? "按住姓名拖到另一座位即可互换，修改自动保存在本机" : state.studentsPack ? "点击姓名查看详情 · 红框表示当前不在班" : "座位表已就绪，可直接打印或另存为 PDF";
+  els.seatingNotice.textContent = studentView ? "左右滑动切换1～4组 · 学生视角：打印后交给纪律委员圈出吵闹区域" : unmatched.length ? `${unmatched.length} 个姓名未匹配名册，请核对座位表` : state.seatingEdit ? "左右滑动切换大组 · 按住姓名拖到另一座位即可互换，修改自动保存在本机" : state.studentsPack ? "左右滑动切换1～4组 · 点击姓名查看详情 · 红框表示当前不在班" : "座位表已就绪，可直接打印或另存为 PDF";
   const back = document.createElement("div"); back.className = `seating-stage${studentView ? " student-stage-front" : ""}`; back.textContent = studentView ? "讲台（教室前方）" : "教室后方"; els.seatingBoard.append(back);
   const groups = document.createElement("div"); groups.className = "seating-groups";
   const displayGroups = state.seating.groups.map((group, groupIndex) => ({ group, groupIndex }));
@@ -713,7 +687,7 @@ function candidateForDuty(name, groupNames) {
 }
 function substituteCandidates(action) {
   const already = new Set(ensureDutyDay(action.day).substitutions.map((item) => item.substitute));
-  return activeStudents().filter((student) => student.name !== action.absent && statusFor(student.name) === "在班" && !already.has(student.name)).map((student) => candidateForDuty(student.name,action.groupNames)).sort((a,b) => b.sameGroup-a.sameGroup || b.makeup-a.makeup || a.count-b.count || a.name.localeCompare(b.name,"zh-CN")).slice(0,20);
+  return activeStudents().filter((student) => student.name !== action.absent && statusFor(student.name) === "在班" && profileFor(student.name).dutyParticipation && !already.has(student.name)).map((student) => candidateForDuty(student.name,action.groupNames)).sort((a,b) => b.sameGroup-a.sameGroup || b.makeup-a.makeup || a.count-b.count || a.name.localeCompare(b.name,"zh-CN")).slice(0,20);
 }
 function renderDutyActionCandidates() {
   els.dutyActionCandidates.replaceChildren(); const action = state.dutyAction; if (!action) return;
@@ -812,7 +786,7 @@ function renderWhere() {
 
 function renderPicked() {
   els.pickedList.replaceChildren(); if (!state.picked.size) { els.pickedList.append(emptyNode("先在上方搜索，再轻点照片加入")); return; }
-  [...state.picked].forEach((name) => { const student = studentByName(name); const stability = ATTENDANCE_STABILITY_OPTIONS.find((option) => option.value === profileFor(name).attendanceStability)?.label || "普通"; const row = document.createElement("div"); row.className = "picked-person"; row.innerHTML = `<img alt="${name}" src="${imageFor(student)}"><div><strong>${name}</strong><small>${statusFor(name)} · ${stability}</small></div><button type="button" aria-label="移除${name}">×</button>`; row.querySelector("button").addEventListener("click", () => togglePick(name)); els.pickedList.append(row); });
+  [...state.picked].forEach((name) => { const student = studentByName(name); const rotation = profileFor(name).dutyParticipation ? "参加轮值" : "暂停轮值"; const row = document.createElement("div"); row.className = "picked-person"; row.innerHTML = `<img alt="${name}" src="${imageFor(student)}"><div><strong>${name}</strong><small>${statusFor(name)} · ${rotation}</small></div><button type="button" aria-label="移除${name}">×</button>`; row.querySelector("button").addEventListener("click", () => togglePick(name)); els.pickedList.append(row); });
 }
 
 function showViewerPerson(index) {
@@ -823,7 +797,7 @@ function showViewerPerson(index) {
   els.personManagement.classList.add("hidden"); setManagementView("summary");
   const dorm = dormFor(name); const status = statusFor(name); els.personName.textContent = name; els.personPhoto.src = imageFor(student); els.personPhoto.alt = name; els.personPinyin.textContent = student.pinyin || ""; showViewerRole(name); els.personDorm.textContent = `${status}${student.origin ? ` · ${student.origin}` : ""}${dorm ? ` · ${dorm.room.room}${dorm.member.bed ? ` · ${dorm.member.bed}` : ""}` : " · 未登记宿舍"}`;
   els.personStatus.value = status === "待确认" ? "请假" : status; els.leaveUntil.value = state.leaves[name]?.until || ""; els.personNote.value = noteFor(name); renderStatusPicker(); toggleLeaveField();
-  renderPersonStability();
+  renderPersonDutyParticipation();
   els.personPrev.disabled = state.viewerIndex === 0; els.personNext.disabled = state.viewerIndex === state.viewerNames.length - 1;
   els.personPick.textContent = state.picked.has(name) ? "已加入点人" : "加入点人"; els.personPick.classList.toggle("picked", state.picked.has(name));
 }
@@ -890,7 +864,7 @@ function renderDataStatus() {
   els.dutyDataStatus.textContent = state.duty ? `${state.duty.weekLabel || state.duty.weekStart || "已导入"} · 劳动委员 ${dutyRoleCount}/4` : "尚未导入";
   els.dormDataStatus.textContent = state.dorm ? `${state.dorm.rooms.length} 间宿舍 · ${state.dorm.rooms.reduce((n,r)=>n+r.members.length,0)} 人` : "尚未导入";
   els.seatingDataStatus.textContent = state.seating ? `${state.seating.dateLabel || state.seating.date || "已导入"} · ${seatingNames().length} 个座位` : "尚未导入";
-  const managed = Object.values(state.management).filter((profile) => profile?.isCadre || profile?.impressionTags?.length || profile?.workNote || profile?.discipline?.length || profile?.contributions?.length || (profile?.attendanceStability && profile.attendanceStability !== "normal")).length;
+  const managed = Object.values(state.management).filter((profile) => profile?.isCadre || profile?.impressionTags?.length || profile?.workNote || profile?.discipline?.length || profile?.contributions?.length || profile?.dutyParticipation === false).length;
   const incidents = Object.values(state.management).reduce((count, profile) => count + (Array.isArray(profile?.discipline) ? profile.discipline.length : 0), 0);
   const contributions = Object.values(state.management).reduce((count, profile) => count + (Array.isArray(profile?.contributions) ? profile.contributions.length : 0), 0);
   const dutyDebtCount = Object.values(state.dutyOps.debts).reduce((count,debt) => count + (debt?.makeup || 0) + (debt?.redo || 0),0);
@@ -907,7 +881,7 @@ document.querySelectorAll(".mode").forEach((button) => button.addEventListener("
 els.searchInput.addEventListener("input", (e) => { state.query = e.target.value.trim(); renderStudents(); }); els.clearSearch.addEventListener("click", () => { state.query=""; els.searchInput.value=""; renderStudents(); els.searchInput.focus(); }); els.daySelect.addEventListener("change", () => renderDuty(els.daySelect.value));
 els.genderFilters.addEventListener("click", (event) => { const button = event.target.closest("[data-gender]"); if (!button) return; state.genderFilter = button.dataset.gender; renderStudents(); });
 els.layoutToggle.addEventListener("click", () => { state.findLayout = state.findLayout === "grid" ? "cards" : "grid"; localStorage.setItem("find-person-layout",state.findLayout); renderStudents(); });
-els.pickModeToggle.addEventListener("click", () => { if (state.pickMode) { state.pickMode = false; setMode("batch"); return; } state.pickMode = true; renderStudents(); toast("点人物卡右上圆圈连续选人"); });
+els.pickModeToggle.addEventListener("click", () => { if (state.pickMode) { state.pickMode = false; setMode("batch"); return; } state.pickMode = true; renderStudents(); toast("点人物卡任意位置连续选人"); });
 els.studentSort.addEventListener("change", () => { state.studentSort = els.studentSort.value; localStorage.setItem("find-person-student-sort",state.studentSort); renderStudents(); });
 els.seatingEditToggle.addEventListener("click", () => { if (!state.seating) return toast("请先导入座位表 JS"); state.seatingEdit = !state.seatingEdit; renderSeating(); });
 els.seatingPerspectiveToggle.addEventListener("click", () => { if (!state.seating) return toast("请先导入座位表 JS"); state.seatingEdit = false; state.seatingPerspective = state.seatingPerspective === "student" ? "teacher" : "student"; renderSeating(); });
@@ -933,13 +907,14 @@ els.dataButton.addEventListener("click", () => { renderDataStatus(); els.dataDia
 els.exportManagement.addEventListener("click", () => exportJS("FIND_PERSON_MANAGEMENT_DATA",managementExportPayload(),`management-data-${TODAY}.js`));
 els.forgetData.addEventListener("click", async () => { if (!window.confirm("确定清除这台设备上的学生、值日、宿舍、座位、历史留存和管理记录吗？请先导出需要的备份。")) return; await clearDB(); state.studentsPack=state.duty=state.dorm=state.seating=null; state.whereabouts={}; state.leaves={}; state.history={}; state.management={}; state.dutyOps=normalizeDutyOps(null); state.autoArchive=true; els.autoArchive.checked=true; state.picked.clear(); persistPicked(); els.dataDialog.close(); renderAll(); toast("已清除本机全部数据"); });
 els.batchNote.value = localStorage.getItem("find-person-note") || ""; els.batchNote.addEventListener("input", () => localStorage.setItem("find-person-note",els.batchNote.value)); els.clearBatch.addEventListener("click", () => { state.picked.clear(); persistPicked(); renderPicked(); renderStudents(); toast("已清空点名组"); });
-els.copyBatch.addEventListener("click", async () => { if (!state.picked.size) return toast("还没有选择学生"); const note=els.batchNote.value.trim(); const text=`人员：${[...state.picked].join("、")}${note?`\n事项：${note}`:""}`; try { await navigator.clipboard.writeText(text); toast("名单与备注已复制"); } catch { window.prompt("长按复制",text); } });
+els.copyBatch.addEventListener("click", async () => { if (!state.picked.size) return toast("还没有选择学生"); const text=batchSummaryText([...state.picked],els.batchNote.value); try { await navigator.clipboard.writeText(text); toast("名单与备注已复制"); } catch { window.prompt("长按复制",text); } });
 els.copyWhereSummary.addEventListener("click", async () => { const text = whereaboutsSummaryText(); try { await navigator.clipboard.writeText(text); toast("今日去向信息已复制"); } catch { window.prompt("长按复制", text); } });
 els.personPhotoFile.addEventListener("change", async (e) => { if (!e.target.files[0]) return; try { state.pendingPhoto=await compressPhoto(e.target.files[0]); els.personPhoto.src=state.pendingPhoto; toast("照片已处理，点保存生效"); } catch { toast("照片处理失败"); } }); els.savePerson.addEventListener("click",savePerson);
 els.personPrev.addEventListener("click", () => { els.personEditor.classList.add("hidden"); els.personManagement.classList.add("hidden"); showViewerPerson(state.viewerIndex - 1); });
 els.personNext.addEventListener("click", () => { els.personEditor.classList.add("hidden"); els.personManagement.classList.add("hidden"); showViewerPerson(state.viewerIndex + 1); });
 els.personPick.addEventListener("click", () => { const index = state.viewerIndex; togglePick(state.currentPerson); showViewerPerson(index); });
 els.togglePersonEditor.addEventListener("click", () => { els.personManagement.classList.add("hidden"); els.personEditor.classList.remove("hidden"); }); els.closePersonEditor.addEventListener("click", () => els.personEditor.classList.add("hidden"));
+els.personDutyParticipation.addEventListener("change", () => setDutyParticipation(state.currentPerson, els.personDutyParticipation.checked));
 els.closeManagement.addEventListener("click", () => els.personManagement.classList.add("hidden"));
 els.toggleCadre.addEventListener("click", openCadreEditor);
 els.cadreRoleInput.addEventListener("input", renderCadreRolePicker); els.cancelCadre.addEventListener("click", () => setManagementView("summary")); els.saveCadre.addEventListener("click", saveCadre); els.removeCadre.addEventListener("click", removeCadreRole);
@@ -966,7 +941,6 @@ els.saveToday.addEventListener("click", () => saveDailySnapshot("手动保存", 
 els.openHistory.addEventListener("click", () => { renderHistoryDialog(TODAY); els.historyDialog.showModal(); });
 els.historyDay.addEventListener("change", () => renderHistoryDialog(els.historyDay.value));
 els.exportTodayDuty.addEventListener("click", exportTodayForDuty);
-els.exportDutyLink.addEventListener("click", exportDutyLinkData);
 els.exportHistory.addEventListener("click", exportAttendanceHistory); els.historyExport.addEventListener("click", exportAttendanceHistory);
 els.autoArchive.addEventListener("change", async () => {
   state.autoArchive = els.autoArchive.checked; await dbSet("attendance-auto", state.autoArchive);
@@ -994,8 +968,10 @@ document.addEventListener("visibilitychange", async () => {
   try {
     const [studentsData,duty,dorm,seating,legacy,whereToday,whereCurrent,leaves,history,autoArchive,management,dutyOps] = await Promise.all([dbGet("students"),dbGet("duty"),dbGet("dorm"),dbGet("seating"),dbGet("active"),dbGet(`where:${TODAY}`),dbGet("where:current"),dbGet("leaves"),dbGet("attendance-history-v1"),dbGet("attendance-auto"),dbGet("management-v1"),dbGet("duty-ops-v1")]);
     state.studentsPack=studentsData; state.duty=duty; state.dorm=dorm; state.seating=seating; state.whereabouts=whereCurrent||whereToday||{}; state.leaves=leaves||{}; state.history=history||{}; state.management=management||{}; state.dutyOps=normalizeDutyOps(dutyOps); mergeDutyCommissioners(state.duty); state.autoArchive=autoArchive !== false; els.autoArchive.checked=state.autoArchive;
+    const managementMigrated = migrateDutyParticipation(state.management);
     if (ensureStudentIds(state.studentsPack)) await dbSet("students", state.studentsPack);
     if (state.duty?.commissioners) await dbSet("duty-ops-v1",state.dutyOps);
+    if (managementMigrated) await dbSet("management-v1", state.management);
     if (!whereCurrent && whereToday) await dbSet("where:current", state.whereabouts);
     if (!state.studentsPack && legacy?.students) { state.studentsPack={version:legacy.version,className:legacy.className,students:legacy.students}; ensureStudentIds(state.studentsPack); state.duty=state.duty||legacy.duty||null; state.dorm=state.dorm||legacy.dorm||null; state.seating=state.seating||legacy.seating||null; mergeDutyCommissioners(state.duty); await Promise.all([dbSet("students",state.studentsPack),dbSet("duty",state.duty),dbSet("dorm",state.dorm),dbSet("seating",state.seating),dbSet("duty-ops-v1",state.dutyOps)]); }
   } catch { toast("无法读取本机数据"); }
