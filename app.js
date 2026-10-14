@@ -403,9 +403,20 @@ function renderManagementSummary() {
   els.leaveCount.textContent = counts.leave; els.contributionCount.textContent = contributions.length; els.disciplineCount.textContent = discipline.length;
   els.disciplineLevel.textContent = highestDisciplineLevel(discipline) || "无";
   els.advancementLevel.textContent = profile.advancement?.label || "待段考数据";
-  const latest = [...discipline.map((record) => ({...record, recordKind:"违纪"})), ...contributions.map((record) => ({...record, recordKind:"贡献"}))].sort((a,b) => String(b.at).localeCompare(String(a.at)))[0];
-  const latestDate = latest?.at ? localDateKey(new Date(latest.at)) : "";
-  els.latestDiscipline.textContent = latest ? `最近记录：${latestDate} · ${latest.recordKind}${latest.type ? ` · ${latest.type}` : ""}${latest.level ? ` · ${latest.level}` : ""}${latest.fact ? ` · ${latest.fact}` : ""}` : "暂无违纪或贡献记录";
+  const records = [...discipline.map((record) => ({...record, recordKind:"违纪"})), ...contributions.map((record) => ({...record, recordKind:"贡献"}))].sort((a,b) => String(b.at || "").localeCompare(String(a.at || "")));
+  els.latestDiscipline.replaceChildren();
+  if (!records.length) {
+    const empty = document.createElement("p"); empty.className = "management-history-empty"; empty.textContent = "暂无违纪或贡献记录"; els.latestDiscipline.append(empty);
+  }
+  records.forEach((record) => {
+    const item = document.createElement("article"); item.className = "management-history-item";
+    const heading = document.createElement("strong"); heading.textContent = [record.recordKind,record.type,record.level].filter(Boolean).join(" · ");
+    const time = document.createElement("small"); const date = new Date(record.at);
+    time.textContent = record.at && !Number.isNaN(date.getTime()) ? `${localDateKey(date)} ${formatCopyTime(date)}` : "日期未记录";
+    const fact = document.createElement("p"); fact.textContent = record.fact || "未填写备注";
+    item.append(heading,time,fact); els.latestDiscipline.append(item);
+  });
+  els.latestDiscipline.scrollTop = 0;
 }
 function renderCadreRolePicker() {
   const current = els.cadreRoleInput.value.trim();

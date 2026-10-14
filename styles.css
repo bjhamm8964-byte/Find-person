@@ -319,7 +319,15 @@ dialog p { color: var(--muted); line-height: 1.6; }
 .management-stats span { margin-top: 5px; color: rgba(255,255,255,.62); font-size: 11px; }
 .advancement-placeholder { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding: 15px 16px; border: 1px dashed rgba(255,255,255,.28); border-radius: 16px; color: rgba(255,255,255,.68); background: rgba(0,0,0,.08); font-size: 13px; }
 .advancement-placeholder strong { color: #fff; font-size: 14px; }
-.latest-discipline { min-height: 20px; margin: 14px 3px 0; color: rgba(255,255,255,.7); font-size: 12px; }
+.management-history { margin-top: 14px; }
+.management-history h4 { margin: 0 0 8px; color: rgba(255,255,255,.8); font-size: 13px; }
+.management-history-list { max-height: 32vh; max-height: 32dvh; overflow-y: auto; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; border: 1px solid rgba(255,255,255,.16); border-radius: 14px; background: rgba(0,0,0,.16); }
+.management-history-item { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,.14); }
+.management-history-item:last-child { border-bottom: 0; }
+.management-history-item strong { display: block; color: #fff; font-size: 13px; }
+.management-history-item small { display: block; margin-top: 4px; color: rgba(255,255,255,.58); font-size: 11px; }
+.management-history-item p { margin: 7px 0 0; color: rgba(255,255,255,.85); font-size: 13px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.management-history-empty { margin: 0; padding: 14px; color: rgba(255,255,255,.65); font-size: 12px; }
 .management-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: auto; padding-top: 18px; }
 .management-actions-three { grid-template-columns: repeat(3,minmax(0,1fr)); }
 .management-actions-three button { padding: 0 5px; font-size: 14px; }

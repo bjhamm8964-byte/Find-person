@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="styles.css?v=20261008-4">
+  <link rel="stylesheet" href="styles.css?v=20261014-1">
 </head>
 <body>
   <header class="topbar">
@@ -186,7 +186,7 @@
             <div><strong id="disciplineLevel">无</strong><span>最高程度</span></div>
           </div>
           <div class="advancement-placeholder"><span>升学可能性</span><strong id="advancementLevel">待段考数据</strong></div>
-          <p id="latestDiscipline" class="latest-discipline"></p>
+          <section class="management-history" aria-label="奖惩历史记录"><h4>全部奖惩记录</h4><div id="latestDiscipline" class="management-history-list" tabindex="0" aria-label="奖惩记录列表，可上下滑动"></div></section>
           <div class="management-actions management-actions-three"><button id="toggleCadre" class="secondary-button" type="button">设为班干</button><button id="editImpression" class="secondary-button" type="button">第一印象</button><button id="addDiscipline" class="primary-button" type="button">奖惩登记</button></div>
         </div>
         <div id="cadreEditor" class="management-editor hidden">
@@ -228,6 +228,6 @@
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=20261008-4" defer></script>
+  <script src="app.js?v=20261014-1" defer></script>
 </body>
 </html>
