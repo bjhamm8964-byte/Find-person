@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="styles.css?v=20261014-3">
+  <link rel="stylesheet" href="styles.css?v=20261018-1">
 </head>
 <body>
   <header class="topbar">
@@ -197,12 +197,14 @@
           <div class="management-actions"><button id="cancelCadre" class="secondary-button" type="button">返回</button><button id="saveCadre" class="primary-button" type="button">保存职位</button></div>
         </div>
         <div id="impressionEditor" class="management-editor hidden">
-          <p class="picker-title">第一印象 · 最多选 3 个</p>
-          <div id="impressionButtons" class="quick-picker impression-picker"></div>
+          <div class="impression-editor-scroll">
           <p class="picker-title">个人备注标签 · 自由填写</p>
           <div id="personalTagList" class="personal-tag-list" aria-label="已添加的个人标签"></div>
           <label class="compact-field">自定义内容<textarea id="managementNoteInput" rows="2" placeholder="写下自己的看法、吐槽或提醒，一段内容贴成一个标签"></textarea></label>
           <button id="addPersonalTag" class="secondary-button personal-tag-add" type="button">＋ 贴上标签</button>
+          <p class="picker-title">预设第一印象 · 最多选 3 个</p>
+          <div id="impressionButtons" class="quick-picker impression-picker"></div>
+          </div>
           <div class="management-actions"><button id="cancelImpression" class="secondary-button" type="button">返回</button><button id="saveImpression" class="primary-button" type="button">保存</button></div>
         </div>
         <div id="disciplineEditor" class="management-editor hidden">
@@ -231,6 +233,6 @@
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=20261014-3" defer></script>
+  <script src="app.js?v=20261018-1" defer></script>
 </body>
 </html>
