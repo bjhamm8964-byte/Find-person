@@ -307,13 +307,14 @@ dialog p { color: var(--muted); line-height: 1.6; }
 .management-head small { display: block; margin-bottom: 4px; color: rgba(255,255,255,.62); font-size: 11px; letter-spacing: .08em; }
 .management-head h3 { margin: 0; color: #fff; font-size: clamp(25px,7vw,34px); }
 .management-head button { width: 48px; height: 48px; border: 1px solid rgba(255,255,255,.35); border-radius: 50%; color: #fff; background: rgba(0,0,0,.18); font-size: 30px; }
-#managementSummaryView { display: flex; min-height: 0; flex: 1; flex-direction: column; }
-.impression-summary { display: flex; min-height: 38px; gap: 8px; flex-wrap: wrap; }
+#managementSummaryView { display: block; min-height: auto; flex: 1 0 auto; }
+.impression-summary { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.impression-summary:empty { display: none; }
 .impression-chip { padding: 9px 12px; border: 1px solid rgba(255,255,255,.18); border-radius: 13px; color: #fff; background: rgba(90,151,122,.42); font-size: 13px; font-weight: 760; }
-.impression-empty { color: rgba(255,255,255,.68); font-size: 14px; }
-.management-note { min-height: 21px; margin: 10px 2px clamp(22px,4vh,38px); color: rgba(255,255,255,.72); font-size: 13px; line-height: 1.5; }
+.management-note { margin: 0 0 16px; color: rgba(255,255,255,.72); font-size: 13px; line-height: 1.5; }
 .personal-tag-summary, .personal-tag-list { display: flex; flex-wrap: wrap; align-content: start; gap: 8px; flex-shrink: 0; }
-.personal-tag-summary { max-height: 24dvh; overflow-y: auto; }
+.personal-tag-summary { height: auto; min-height: min-content; max-height: none; overflow: visible; align-items: flex-start; }
+.personal-tag-summary:empty { display: none; }
 .personal-tag-list:empty { display: none; }
 .personal-tag-summary > *, .personal-tag-list > * { flex: 0 0 auto; min-width: 0; }
 .personal-tag { display: inline-block; max-width: 100%; padding: 9px 12px; border: 1px solid rgba(238,207,152,.35); border-radius: 13px; color: #fff0cf; background: rgba(128,92,38,.35); font-size: 13px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; text-align: left; }
@@ -351,7 +352,7 @@ dialog p { color: var(--muted); line-height: 1.6; }
 .impression-editor-scroll { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 0 2px 12px; scroll-padding-block: 12px; -webkit-overflow-scrolling: touch; }
 #impressionEditor > .management-actions { flex: 0 0 auto; margin-top: 0; padding-top: 12px; }
 .impression-editor-scroll .personal-tag-add { width: 100%; }
-#managementSummaryView > * { flex-shrink: 0; }
+#managementSummaryView > .management-actions { margin-top: 0; }
 .picker-title { margin: 14px 0 9px; color: rgba(255,255,255,.68); font-size: 13px; font-weight: 750; }
 .quick-picker { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }
 .quick-option { min-height: 48px; padding: 6px 4px; border: 1px solid rgba(255,255,255,.2); border-radius: 14px; color: #fff; background: rgba(255,255,255,.11); font-size: 12px; font-weight: 700; }

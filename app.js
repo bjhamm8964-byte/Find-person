@@ -400,7 +400,6 @@ function renderManagementSummary() {
   els.toggleCadre.classList.toggle("selected", profile.isCadre);
   els.impressionSummary.replaceChildren();
   if (profile.impressionTags.length) profile.impressionTags.forEach((tag) => { const chip = document.createElement("span"); chip.className = "impression-chip"; chip.textContent = tag; els.impressionSummary.append(chip); });
-  else { const empty = document.createElement("span"); empty.className = "impression-empty"; empty.textContent = "尚未添加第一印象"; els.impressionSummary.append(empty); }
   els.managementNote.replaceChildren();
   profile.personalTags.forEach((tag) => { const chip = document.createElement("span"); chip.className = "personal-tag"; chip.textContent = tag; els.managementNote.append(chip); });
   els.leaveCount.textContent = counts.leave; els.contributionCount.textContent = contributions.length; els.disciplineCount.textContent = discipline.length;
