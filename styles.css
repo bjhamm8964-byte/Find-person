@@ -312,6 +312,12 @@ dialog p { color: var(--muted); line-height: 1.6; }
 .impression-chip { padding: 9px 12px; border: 1px solid rgba(255,255,255,.18); border-radius: 13px; color: #fff; background: rgba(90,151,122,.42); font-size: 13px; font-weight: 760; }
 .impression-empty { color: rgba(255,255,255,.68); font-size: 14px; }
 .management-note { min-height: 21px; margin: 10px 2px clamp(22px,4vh,38px); color: rgba(255,255,255,.72); font-size: 13px; line-height: 1.5; }
+.personal-tag-summary, .personal-tag-list { display: flex; flex-wrap: wrap; align-content: start; gap: 8px; max-height: 24vh; overflow-y: auto; }
+.personal-tag { display: inline-block; max-width: 100%; padding: 9px 12px; border: 1px solid rgba(238,207,152,.35); border-radius: 13px; color: #fff0cf; background: rgba(128,92,38,.35); font-size: 13px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; text-align: left; }
+.personal-tag.removable { cursor: pointer; min-height: 44px; }
+.personal-tag-add { min-height: 44px; margin-top: 10px; }
+#managementNoteInput { width: 100%; margin: 0; resize: vertical; min-height: 76px; border-color: rgba(255,255,255,.22); color: #fff; background: rgba(255,255,255,.11); }
+#managementNoteInput::placeholder { color: rgba(255,255,255,.45); }
 .management-stats { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 9px; }
 .management-stats > div { min-height: clamp(88px,12vh,118px); padding: 14px 3px; border: 1px solid rgba(255,255,255,.16); border-radius: 19px; background: rgba(255,255,255,.11); text-align: center; backdrop-filter: blur(8px); }
 .management-stats strong, .management-stats span { display: block; }

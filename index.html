@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="styles.css?v=20261014-1">
+  <link rel="stylesheet" href="styles.css?v=20261014-3">
 </head>
 <body>
   <header class="topbar">
@@ -178,7 +178,7 @@
         <div class="management-head"><div><small>全屏快速一览</small><h3 id="managementTitle">管理摘要</h3></div><button id="closeManagement" type="button" aria-label="关闭管理摘要">×</button></div>
         <div id="managementSummaryView">
           <div id="impressionSummary" class="impression-summary"></div>
-          <p id="managementNote" class="management-note"></p>
+          <div id="managementNote" class="management-note personal-tag-summary" aria-label="个人备注标签"></div>
           <div class="management-stats">
             <div><strong id="leaveCount">0</strong><span>请假</span></div>
             <div><strong id="contributionCount">0</strong><span>贡献</span></div>
@@ -199,7 +199,10 @@
         <div id="impressionEditor" class="management-editor hidden">
           <p class="picker-title">第一印象 · 最多选 3 个</p>
           <div id="impressionButtons" class="quick-picker impression-picker"></div>
-          <label class="compact-field">工作提示<input id="managementNoteInput" type="text" maxlength="40" placeholder="如：交代任务时说明完成时间"></label>
+          <p class="picker-title">个人备注标签 · 自由填写</p>
+          <div id="personalTagList" class="personal-tag-list" aria-label="已添加的个人标签"></div>
+          <label class="compact-field">自定义内容<textarea id="managementNoteInput" rows="2" placeholder="写下自己的看法、吐槽或提醒，一段内容贴成一个标签"></textarea></label>
+          <button id="addPersonalTag" class="secondary-button personal-tag-add" type="button">＋ 贴上标签</button>
           <div class="management-actions"><button id="cancelImpression" class="secondary-button" type="button">返回</button><button id="saveImpression" class="primary-button" type="button">保存</button></div>
         </div>
         <div id="disciplineEditor" class="management-editor hidden">
@@ -228,6 +231,6 @@
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=20261014-1" defer></script>
+  <script src="app.js?v=20261014-3" defer></script>
 </body>
 </html>
