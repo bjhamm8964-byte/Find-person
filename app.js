@@ -9,11 +9,6 @@ const IMPRESSION_OPTIONS = ["主动执行","提醒后完成","需反复确认","
 const DISCIPLINE_TYPES = ["课堂","作业","宿舍","卫生","安全","其他"];
 const DISCIPLINE_LEVELS = ["轻微","一般","严重"];
 const CADRE_ROLES = ["班长","副班长","学习委员","劳动委员","纪律委员","体育委员","生活委员","课代表"];
-const DUTY_ROLES = [
-  { id: "floor", label: "教室走廊委员", description: "扫拖、擦窗扶手与收尾" },
-  { id: "zone1", label: "1号区委员", description: "1号区点名与验收" },
-  { id: "zone2", label: "2号区委员", description: "2号区点名与验收" },
-];
 const placeholderImage = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="40" fill="#dce9df"/><circle cx="100" cy="76" r="38" fill="#6c8c7d"/><path d="M35 185c5-45 31-69 65-69s60 24 65 69" fill="#6c8c7d"/></svg>`);
 
 const state = {
@@ -21,16 +16,15 @@ const state = {
   history: {}, autoArchive: true, management: {}, dutyOps: { commissioners: {}, days: {}, debts: {} },
   mode: "find", query: "", genderFilter: "all", findLayout: localStorage.getItem("find-person-layout") === "grid" ? "grid" : "cards", studentSort: localStorage.getItem("find-person-student-sort") || "default", pickMode: false, seatingEdit: false, seatingPerspective: "teacher", currentPerson: null, pendingPhoto: null,
   impressionDraft: [], personalTagsDraft: [], recordKindDraft: "discipline", disciplineTypeDraft: "课堂", disciplineLevelDraft: "轻微",
-  commissionerRole: "floor", dutyAction: null, dutyActionSelection: new Set(),
   viewerNames: [], viewerIndex: 0,
   picked: new Set(JSON.parse(localStorage.getItem("find-person-picked") || "[]")),
 };
 const $ = (id) => document.getElementById(id);
 const ids = [
-  "setup","app","studentSetupFile","seatingSetupPrintFile","dataButton","dataDialog","dataStatus","dutyDataStatus","dormDataStatus","seatingDataStatus","managementDataStatus","studentFile","dutyFile","dormFile","seatingFile","managementFile","exportStudents","exportDuty","exportDorm","exportSeating","exportManagement","forgetData",
+  "setup","app","studentSetupFile","seatingSetupPrintFile","dataButton","dataDialog","dataStatus","dutyDataStatus","dormDataStatus","seatingDataStatus","managementDataStatus","studentFile","dormFile","seatingFile","managementFile","exportStudents","exportDorm","exportSeating","exportManagement","forgetData",
   "searchPanel","searchInput","clearSearch","searchHint","genderFilters","findView","seatingView","dutyView","dormView","whereView","batchView","studentRail","resultTitle","resultCount","studentSort","pickModeToggle","layoutToggle","browseTip","batchCount","seatingDate","seatingCount","seatingBoard","seatingNotice","seatingEditToggle","seatingExportQuick","seatingPrintFile","seatingPrintButton","seatingPerspectiveToggle","seatingPrintTitle","seatingPrintMeta","seatingPrintInstruction",
-  "dateLabel","dutyTitle","daySelect","dutyWeekNotice","dutyList","dutyTeamButton","commissionerStrip","dutyDebtList","commissionerDialog","commissionerRoleButtons","commissionerSearch","clearCommissioner","commissionerCandidates","dutyActionDialog","dutyActionEyebrow","dutyActionTitle","dutyActionHint","dutyActionCandidates","saveDutyAction","dormTitle","dormCount","dormList","whereDate","whereSummary","whereGroups","copyWhereSummary","resetWhere","autoArchive","archiveStatus","saveToday","openHistory","exportTodayDuty","exportHistory","historyDialog","historyDay","historySummary","historyRecords","historyExport",
-  "pickedList","batchNote","copyBatch","clearBatch","personDialog","personHero","personName","personPhoto","personPinyin","personRole","personDorm","personPrev","personNext","personPick","togglePersonEditor","personDutyParticipation","personDutyParticipationHint","personEditor","closePersonEditor","personStatus","personStatusButtons","leaveUntilWrap","leaveUntil","personNote","personPhotoFile","savePerson",
+  "dateLabel","dutyTitle","dutyWeekNotice","dutyList","dormTitle","dormCount","dormList","whereDate","whereSummary","whereGroups","copyWhereSummary","resetWhere","autoArchive","archiveStatus","saveToday","openHistory","exportTodayDuty","exportHistory","historyDialog","historyDay","historySummary","historyRecords","historyExport",
+  "pickedList","batchNote","copyBatch","clearBatch","personDialog","personHero","personName","personPhoto","personPinyin","personRole","personDorm","personPrev","personNext","personPick","togglePersonEditor","personEditor","closePersonEditor","personStatus","personStatusButtons","leaveUntilWrap","leaveUntil","personNote","personPhotoFile","savePerson",
   "personManagement","closeManagement","managementTitle","managementSummaryView","impressionSummary","managementNote","leaveCount","contributionCount","disciplineCount","disciplineLevel","advancementLevel","latestDiscipline","toggleCadre","editImpression","addDiscipline","cadreEditor","cadreRoleButtons","cadreRoleInput","removeCadre","cancelCadre","saveCadre","impressionEditor","impressionButtons","managementNoteInput","cancelImpression","saveImpression","disciplineEditor","managementRecordKindButtons","disciplineOnlyFields","disciplineTypeButtons","disciplineSeverityButtons","recordFactLabel","disciplineFact","cancelDiscipline","saveDiscipline","toast"
 ];
 ids.push("personalTagList", "addPersonalTag");
@@ -116,12 +110,6 @@ function normalizeDutyOps(value) {
     debts: value?.debts && typeof value.debts === "object" ? value.debts : {},
   };
 }
-function mergeDutyCommissioners(payload) {
-  if (!payload?.commissioners) return;
-  DUTY_ROLES.forEach((role) => {
-    if (!(role.id in state.dutyOps.commissioners) && payload.commissioners[role.id]) state.dutyOps.commissioners[role.id] = payload.commissioners[role.id];
-  });
-}
 
 async function importDataFile(file, expectedKind = "auto") {
   if (!file) return;
@@ -132,11 +120,11 @@ async function importDataFile(file, expectedKind = "auto") {
       state.studentsPack = { version: payload.version, className: payload.className, students: payload.students };
       ensureStudentIds(state.studentsPack);
       state.duty = payload.duty || state.duty; state.dorm = payload.dorm || state.dorm; state.seating = payload.seating || state.seating;
-      mergeDutyCommissioners(state.duty); await Promise.all([dbSet("students", state.studentsPack), dbSet("duty", state.duty), dbSet("dorm", state.dorm), dbSet("seating", state.seating), dbSet("duty-ops-v1",state.dutyOps)]);
+      await Promise.all([dbSet("students", state.studentsPack), dbSet("duty", state.duty), dbSet("dorm", state.dorm), dbSet("seating", state.seating), dbSet("duty-ops-v1",state.dutyOps)]);
     } else if (variable === "FIND_PERSON_STUDENTS_DATA" && ["auto","students"].includes(expectedKind)) {
       validateStudents(payload); ensureStudentIds(payload); state.studentsPack = payload; await dbSet("students", payload);
     } else if (variable === "FIND_PERSON_DUTY_DATA" && ["auto","duty"].includes(expectedKind)) {
-      validateDuty(payload); state.duty = payload; mergeDutyCommissioners(payload); await Promise.all([dbSet("duty", payload),dbSet("duty-ops-v1",state.dutyOps)]);
+      validateDuty(payload); state.duty = payload; await Promise.all([dbSet("duty", payload),dbSet("duty-ops-v1",state.dutyOps)]);
     } else if (variable === "FIND_PERSON_DORM_DATA" && ["auto","dorm"].includes(expectedKind)) {
       validateDorm(payload); state.dorm = payload; await dbSet("dorm", payload);
     } else if (variable === "FIND_PERSON_SEATING_DATA" && ["auto","seating"].includes(expectedKind)) {
@@ -149,7 +137,7 @@ async function importDataFile(file, expectedKind = "auto") {
     if (state.studentsPack && state.autoArchive) await saveDailySnapshot("数据更新");
     els.dataDialog.close(); toast(`已导入 ${file.name}`); return true;
   } catch (error) { toast(error.message || "导入失败"); return false; }
-  finally { [els.studentSetupFile,els.seatingSetupPrintFile,els.studentFile,els.dutyFile,els.dormFile,els.seatingFile,els.seatingPrintFile,els.managementFile].forEach((input) => { input.value = ""; }); }
+  finally { [els.studentSetupFile,els.seatingSetupPrintFile,els.studentFile,els.dormFile,els.seatingFile,els.seatingPrintFile,els.managementFile].forEach((input) => { input.value = ""; }); }
 }
 
 async function exportJS(variable, payload, filename) {
@@ -358,18 +346,6 @@ function profileFor(name) {
   };
 }
 
-function renderPersonDutyParticipation() {
-  const name = state.currentPerson; if (!name) return;
-  const participating = profileFor(name).dutyParticipation;
-  els.personDutyParticipation.checked = participating;
-  els.personDutyParticipationHint.textContent = participating ? "当前参加；普通请假不会自动暂停" : "当前暂停；可随时手动恢复";
-}
-async function setDutyParticipation(name, participating) {
-  if (!name || !studentByName(name)) return;
-  const profile = profileFor(name); profile.dutyParticipation = Boolean(participating); profile.updatedAt = new Date().toISOString(); state.management[name] = profile;
-  await dbSet("management-v1", state.management); renderPersonDutyParticipation(); renderPicked(); renderDataStatus();
-  toast(profile.dutyParticipation ? "已恢复参加轮值" : "已暂停参加轮值");
-}
 function whereaboutsCounts(name) {
   let leave = 0; let away = 0;
   Object.values(state.history).forEach((entry) => {
@@ -504,7 +480,6 @@ async function saveDiscipline() {
   await dbSet("management-v1", state.management); els.disciplineFact.value = ""; renderManagementSummary(); setManagementView("summary"); renderDataStatus(); renderStudents(); toast(state.recordKindDraft === "contribution" ? "贡献记录已保存" : "违纪记录已保存");
 }
 function managementExportPayload() { return { version: 5, updatedAt: new Date().toISOString(), profiles: state.management, dutyOps: state.dutyOps }; }
-function dutyExportPayload() { return state.duty ? { ...state.duty, commissioners: { ...state.dutyOps.commissioners } } : null; }
 
 function persistPicked() { localStorage.setItem("find-person-picked", JSON.stringify([...state.picked])); els.batchCount.textContent = state.picked.size ? String(state.picked.size) : ""; }
 function togglePick(name) {
@@ -638,155 +613,24 @@ function startSeatDrag(event) {
   document.addEventListener("pointermove",move); document.addEventListener("pointerup",finish); document.addEventListener("pointercancel",finish);
 }
 
-function weekdayKey(date = new Date()) { return ["周日","周一","周二","周三","周四","周五","周六"][date.getDay()]; }
-function startOfWeek(date = new Date()) { const d = new Date(date); const delta = d.getDay() === 0 ? -6 : 1 - d.getDay(); d.setDate(d.getDate() + delta); return localDateKey(d); }
-function dutyTaskKey(group) { return group?.taskId || group?.task || ""; }
-function dutyRoleForTask(groupOrTask) {
-  const group = typeof groupOrTask === "string" ? { task: groupOrTask } : (groupOrTask || {});
-  if (["classroom_sweep","classroom_mop","window_rails","cleanup_tools"].includes(group.taskId)) return "floor";
-  if (["zone1_sweep_ceiling","zone1_mop","zone1_trash"].includes(group.taskId)) return "zone1";
-  if (group.taskId === "zone2_tongs_trash") return "zone2";
-  const task = group.task || "";
-  if (/^教室扫地|^教室拖地/.test(task)) return "floor";
-  if (/^教室擦拭|^走廊|擦窗|垃圾|工具/.test(task)) return "floor";
-  if (/^1号区/.test(task)) return "zone1";
-  if (/^2号区/.test(task)) return "zone2";
-  return null;
-}
-function dutyDayKey(day) { return `${state.duty?.weekStart || TODAY}:${day}`; }
-function ensureDutyDay(day) {
-  const key = dutyDayKey(day);
-  if (!state.dutyOps.days[key]) state.dutyOps.days[key] = { substitutions: [], inspections: [] };
-  if (!Array.isArray(state.dutyOps.days[key].substitutions)) state.dutyOps.days[key].substitutions = [];
-  if (!Array.isArray(state.dutyOps.days[key].inspections)) state.dutyOps.days[key].inspections = [];
-  return state.dutyOps.days[key];
-}
-function debtFor(name) {
-  if (!state.dutyOps.debts[name]) state.dutyOps.debts[name] = { makeup: 0, redo: 0, substituteCount: 0 };
-  return state.dutyOps.debts[name];
-}
-async function persistDutyOps() { await dbSet("duty-ops-v1", state.dutyOps); }
-function renderCommissioners() {
-  els.commissionerStrip.replaceChildren();
-  DUTY_ROLES.forEach((role) => {
-    const name = state.dutyOps.commissioners[role.id] || ""; const button = document.createElement("button"); button.type = "button"; button.className = `commissioner-card${name ? "" : " vacant"}`;
-    button.innerHTML = `<strong>${role.label}</strong><span>${name || "未设置"}</span>`;
-    button.addEventListener("click", () => openCommissionerDialog(role.id)); els.commissionerStrip.append(button);
-  });
-}
-function renderCommissionerRoles() {
-  els.commissionerRoleButtons.replaceChildren();
-  DUTY_ROLES.forEach((role) => {
-    const current = state.dutyOps.commissioners[role.id] || "未设置"; const button = document.createElement("button"); button.type = "button"; button.className = `role-option${state.commissionerRole === role.id ? " selected" : ""}`;
-    button.innerHTML = `<strong>${role.label}</strong><span>${current} · ${role.description}</span>`;
-    button.addEventListener("click", () => { state.commissionerRole = role.id; renderCommissionerRoles(); renderCommissionerCandidates(); }); els.commissionerRoleButtons.append(button);
-  });
-}
-function commissionerSearchResults() {
-  const query = els.commissionerSearch.value.trim();
-  return activeStudents().map((student,index) => ({ student,index,score:scoreStudent(student,query) })).filter((item) => !query || item.score > 0).sort((a,b) => b.score-a.score || a.index-b.index).slice(0, query ? 16 : 60).map((item) => item.student);
-}
-function renderCommissionerCandidates() {
-  els.commissionerCandidates.replaceChildren(); const selected = state.dutyOps.commissioners[state.commissionerRole] || "";
-  commissionerSearchResults().forEach((student) => {
-    const button = document.createElement("button"); button.type = "button"; button.className = `candidate-person${student.name === selected ? " selected" : ""}`;
-    button.innerHTML = `<img src="${imageFor(student)}" alt=""><strong>${student.name}</strong><small>${student.pinyin || ""}</small>`;
-    button.addEventListener("click", async () => { state.dutyOps.commissioners[state.commissionerRole] = student.name; await persistDutyOps(); renderCommissionerRoles(); renderCommissionerCandidates(); renderCommissioners(); renderDataStatus(); renderDuty(els.daySelect.value); toast("劳动委员已更新"); });
-    els.commissionerCandidates.append(button);
-  });
-}
-function openCommissionerDialog(roleId = "floor") {
-  state.commissionerRole = roleId; els.commissionerSearch.value = ""; renderCommissionerRoles(); renderCommissionerCandidates(); els.commissionerDialog.showModal();
-}
-function renderDutyDebts() {
-  els.dutyDebtList.replaceChildren();
-  Object.entries(state.dutyOps.debts).filter(([name,debt]) => studentByName(name) && ((debt.makeup || 0) > 0 || (debt.redo || 0) > 0)).sort((a,b) => (b[1].redo || 0)-(a[1].redo || 0) || (b[1].makeup || 0)-(a[1].makeup || 0)).forEach(([name,debt]) => {
-    const student = studentByName(name); const row = document.createElement("div"); row.className = "duty-debt-row";
-    const action = debt.redo > 0 && statusFor(name) === "在班" ? `<button type="button">返工完成</button>` : "";
-    row.innerHTML = `<img src="${imageFor(student)}" alt=""><div><strong>${name}</strong><small>${debt.makeup ? `待补位 ${debt.makeup}` : ""}${debt.makeup && debt.redo ? " · " : ""}${debt.redo ? `待返工 ${debt.redo}` : ""}</small></div>${action}`;
-    row.querySelector("button")?.addEventListener("click", async () => { debt.redo = Math.max(0,(debt.redo || 0)-1); await persistDutyOps(); renderDutyDebts(); toast(`${name} 已完成一次返工`); }); els.dutyDebtList.append(row);
-  });
-}
-function existingSubstitution(day, taskKey, absent) { return ensureDutyDay(day).substitutions.find((item) => (item.taskId || item.task) === taskKey && item.absent === absent); }
-function candidateForDuty(name, groupNames) {
-  const debt = debtFor(name); return { name, sameGroup: groupNames.includes(name) ? 1 : 0, makeup: debt.makeup || 0, count: debt.substituteCount || 0 };
-}
-function substituteCandidates(action) {
-  const already = new Set(ensureDutyDay(action.day).substitutions.map((item) => item.substitute));
-  return activeStudents().filter((student) => student.name !== action.absent && statusFor(student.name) === "在班" && profileFor(student.name).dutyParticipation && !already.has(student.name)).map((student) => candidateForDuty(student.name,action.groupNames)).sort((a,b) => b.sameGroup-a.sameGroup || b.makeup-a.makeup || a.count-b.count || a.name.localeCompare(b.name,"zh-CN")).slice(0,20);
-}
-function renderDutyActionCandidates() {
-  els.dutyActionCandidates.replaceChildren(); const action = state.dutyAction; if (!action) return;
-  if (action.type === "substitute") {
-    substituteCandidates(action).forEach((candidate,index) => {
-      const student = studentByName(candidate.name); const button = document.createElement("button"); button.type = "button"; button.className = "candidate-person";
-      const hint = candidate.makeup ? `欠补位 ${candidate.makeup}` : candidate.sameGroup ? "本组优先" : `已补 ${candidate.count}`;
-      button.innerHTML = `<img src="${imageFor(student)}" alt=""><strong>${candidate.name}</strong><small>${index === 0 ? `推荐 · ${hint}` : hint}</small>`;
-      button.addEventListener("click", () => assignDutySubstitute(candidate.name)); els.dutyActionCandidates.append(button);
-    });
-  } else {
-    action.names.forEach((name) => {
-      const student = studentByName(name); if (!student || statusFor(name) !== "在班") return; const selected = state.dutyActionSelection.has(name); const button = document.createElement("button"); button.type = "button"; button.className = `candidate-person${selected ? " selected" : ""}`;
-      button.innerHTML = `<img src="${imageFor(student)}" alt=""><strong>${name}</strong><small>${selected ? "需要返工" : "通过"}</small>`;
-      button.addEventListener("click", () => { selected ? state.dutyActionSelection.delete(name) : state.dutyActionSelection.add(name); renderDutyActionCandidates(); }); els.dutyActionCandidates.append(button);
-    });
-  }
-}
-function openSubstituteDialog(day, group, absent) {
-  state.dutyAction = { type: "substitute", day, task: group.task, taskId: dutyTaskKey(group), absent, groupNames: group.names }; els.dutyActionEyebrow.textContent = "请假顺延 · 点人立即补位"; els.dutyActionTitle.textContent = `${group.task}缺岗`;
-  els.dutyActionHint.textContent = `${absent}当前不在班。优先推荐有待补位记录、其次本组及累计补位较少的在班学生。`; els.saveDutyAction.classList.add("hidden"); renderDutyActionCandidates(); els.dutyActionDialog.showModal();
-}
-async function assignDutySubstitute(name) {
-  const action = state.dutyAction; if (!action || existingSubstitution(action.day,action.taskId,action.absent)) return;
-  const day = ensureDutyDay(action.day); day.substitutions.push({ taskId: action.taskId, task: action.task, absent: action.absent, substitute: name, at: new Date().toISOString() });
-  const absentDebt = debtFor(action.absent); absentDebt.makeup = (absentDebt.makeup || 0) + 1; const substituteDebt = debtFor(name); substituteDebt.substituteCount = (substituteDebt.substituteCount || 0) + 1; if (substituteDebt.makeup > 0) substituteDebt.makeup -= 1;
-  await persistDutyOps(); els.dutyActionDialog.close(); renderDuty(action.day); toast(`${name} 已补位，${action.absent}顺延一次`);
-}
-function openInspectionDialog(day, group) {
-  const taskId = dutyTaskKey(group); const substitutions = ensureDutyDay(day).substitutions.filter((item) => (item.taskId || item.task) === taskId).map((item) => item.substitute); state.dutyAction = { type: "inspection", day, task: group.task, taskId, names: [...new Set([...group.names,...substitutions])] }; state.dutyActionSelection = new Set();
-  els.dutyActionEyebrow.textContent = `${DUTY_ROLES.find((role) => role.id === dutyRoleForTask(group))?.label || "劳动委员"}验收`; els.dutyActionTitle.textContent = group.task; els.dutyActionHint.textContent = "只点选需要返工的人；未点选视为通过。"; els.saveDutyAction.classList.remove("hidden"); renderDutyActionCandidates(); els.dutyActionDialog.showModal();
-}
-async function saveDutyInspection() {
-  const action = state.dutyAction; if (!action || action.type !== "inspection") return; const day = ensureDutyDay(action.day);
-  state.dutyActionSelection.forEach((name) => { if (!day.inspections.some((item) => (item.taskId || item.task) === action.taskId && item.name === name && item.result === "返工")) { day.inspections.push({ taskId: action.taskId, task: action.task, name, result: "返工", at: new Date().toISOString() }); debtFor(name).redo = Math.min(2,(debtFor(name).redo || 0) + 1); } });
-  await persistDutyOps(); els.dutyActionDialog.close(); renderDuty(action.day); toast(state.dutyActionSelection.size ? `已登记 ${state.dutyActionSelection.size} 人返工` : "本组验收通过");
-}
 function smallPerson(student, name, status = "在班", subtext = "") {
   const person = document.createElement("button"); person.type = "button"; person.className = "duty-person";
   person.innerHTML = `<span class="mini-photo"><img alt="${name}" src="${imageFor(student)}">${status !== "在班" ? `<b class="mini-status ${statusClass(status)}">${status}</b>` : ""}</span><span>${name}</span>${subtext ? `<small>${subtext}</small>` : ""}`; return person;
 }
-function dutyDateContext(payload, day, today = new Date()) {
-  const dateKey = localDateKey(today);
-  const dated = /^\d{4}-\d{2}-\d{2}$/.test(day || "");
-  const old = dated ? day !== dateKey : Boolean(payload.weekStart && payload.weekStart !== startOfWeek(today));
-  return { old, isToday: dated ? day === dateKey : day === weekdayKey(today), warning: old ? (dated ? "注意：不是今日数据" : "注意：不是本周数据") : "" };
-}
-function renderDuty(day = els.daySelect.value || localDateKey()) {
-  els.dutyList.replaceChildren(); els.daySelect.replaceChildren();
-  renderCommissioners(); renderDutyDebts();
-  if (!state.duty) { els.dutyWeekNotice.textContent = "请在数据管理中导入 duty-data.js"; els.dutyList.append(emptyNode("尚未导入值日安排")); return; }
-  const labels = state.duty.dayOrder || Object.keys(state.duty.days); labels.forEach((label) => els.daySelect.add(new Option(label,label)));
-  const today = new Date();
-  if (!state.duty.days[day]) day = [localDateKey(today),weekdayKey(today),"周一",...labels].find((label) => labels.includes(label)); els.daySelect.value = day;
-  const context = dutyDateContext(state.duty, day, today);
-  els.dateLabel.textContent = context.isToday && !context.old ? `${today.getMonth()+1}月${today.getDate()}日 · 今天` : "手动查看"; els.dutyTitle.textContent = `${day || "当天"}值日`;
-  els.dutyWeekNotice.textContent = `${state.duty.weekLabel || state.duty.date || state.duty.weekStart || "当前值日表"}${context.warning ? ` · ${context.warning}` : ""}`; els.dutyWeekNotice.classList.toggle("warning", context.old);
-  const operational = context.isToday && !context.old; const dayState = ensureDutyDay(day);
-  const groups = state.duty.days[day] || [];
-  if (!groups.length) { els.dutyList.append(emptyNode("当天没有设置值日名单")); return; }
-  groups.forEach((group) => {
-    const section = document.createElement("section"); section.className = "duty-group"; const taskId = dutyTaskKey(group); const roleId = dutyRoleForTask(group); const substitutions = dayState.substitutions.filter((item) => (item.taskId || item.task) === taskId); const assignedAbsent = new Set(substitutions.map((item) => item.absent));
-    const absent = group.names.filter((name) => statusFor(name) !== "在班"); const unresolved = absent.filter((name) => !assignedAbsent.has(name));
-    section.innerHTML = `<div class="duty-group-head"><h3>${group.task}</h3><div class="duty-group-tools"><span>${group.names.length} 人${absent.length ? ` · 缺 ${absent.length}` : ""}</span></div></div><div class="duty-substitutes"></div><div class="avatar-strip"></div>`;
-    const tools = section.querySelector(".duty-group-tools");
-    if (operational && roleId && unresolved.length) { const button = document.createElement("button"); button.type = "button"; button.className = "alert"; button.textContent = `补位 ${unresolved.length}`; button.addEventListener("click", () => openSubstituteDialog(day,group,unresolved[0])); tools.append(button); }
-    if (operational && roleId) { const button = document.createElement("button"); button.type = "button"; button.textContent = "验收"; button.addEventListener("click", () => openInspectionDialog(day,group)); tools.append(button); }
-    const substituteBox = section.querySelector(".duty-substitutes"); substitutions.forEach((item) => { const chip = document.createElement("span"); chip.className = "substitute-chip"; chip.textContent = `${item.substitute} 替 ${item.absent}`; substituteBox.append(chip); }); if (!substitutions.length) substituteBox.remove();
-    const strip = section.querySelector(".avatar-strip");
-    group.names.forEach((name) => { const person = smallPerson(studentByName(name), name, statusFor(name)); person.addEventListener("click", () => openPerson(name, group.names)); strip.append(person); });
-    substitutions.filter((item) => !group.names.includes(item.substitute)).forEach((item) => { const person = smallPerson(studentByName(item.substitute),item.substitute,"补位",`替 ${item.absent}`); person.addEventListener("click", () => openPerson(item.substitute,[...group.names,...substitutions.map((entry) => entry.substitute)])); strip.append(person); });
-    els.dutyList.append(section);
-  });
+
+function renderDuty() {
+  const view=window.FindDuty||{},date=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai'}).format(new Date());
+  const current=view.date===date,plan=current?view.plan:null;
+  els.dateLabel.textContent=date;els.dutyTitle.textContent='今日值日 · 只读';els.dutyList.replaceChildren();
+  const synced=current&&view.lastSync?new Date(view.lastSync).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}):'';
+  els.dutyWeekNotice.textContent=!view.connected?'请先连接：导入教室白板只读连接文件。':view.error?view.error+(synced?' · 显示缓存，最后获取 '+synced:' · 暂无当天缓存'):'最后获取 '+(synced||'尚未获取')+' · 仅显示值日App已发布安排';
+  if(!plan){els.dutyList.append(emptyNode(!view.connected?'连接后查看当天安排':view.error?'暂时无法获取当天安排':'今日尚未发布'));return;}
+  for(const row of plan.assignments){
+    const section=document.createElement('section');section.className='duty-group';const heading=document.createElement('h3');heading.textContent=row.area+' · '+row.task;section.append(heading);
+    const strip=document.createElement('div');strip.className='avatar-strip';
+    row.names.forEach((name,index)=>{const person=document.createElement('button');person.type='button';person.className='duty-person';const photo=document.createElement('span');photo.className='mini-photo';const img=document.createElement('img');img.alt=name;img.src=imageFor(studentByName(name));photo.append(img);const label=document.createElement('span');label.textContent=name;person.append(photo,label);const detail=[row.roles?.[index],row.notes?.[index]].filter(Boolean).join(' · ');if(detail){const small=document.createElement('small');small.textContent=detail;person.append(small);}person.addEventListener('click',()=>{if(studentByName(name))openPerson(name,row.names);else toast('该学生未在本机学生库中');});strip.append(person);});
+    section.append(strip);els.dutyList.append(section);
+  }
 }
 
 function renderDorm() {
@@ -819,7 +663,7 @@ function renderWhere() {
 
 function renderPicked() {
   els.pickedList.replaceChildren(); if (!state.picked.size) { els.pickedList.append(emptyNode("先在上方搜索，再轻点照片加入")); return; }
-  [...state.picked].forEach((name) => { const student = studentByName(name); const rotation = profileFor(name).dutyParticipation ? "参加轮值" : "暂停轮值"; const row = document.createElement("div"); row.className = "picked-person"; row.innerHTML = `<img alt="${name}" src="${imageFor(student)}"><div><strong>${name}</strong><small>${statusFor(name)} · ${rotation}</small></div><button type="button" aria-label="移除${name}">×</button>`; row.querySelector("button").addEventListener("click", () => togglePick(name)); els.pickedList.append(row); });
+  [...state.picked].forEach((name) => { const student = studentByName(name); const row = document.createElement("div"); row.className = "picked-person"; row.innerHTML = `<img alt="${name}" src="${imageFor(student)}"><div><strong>${name}</strong><small>${statusFor(name)}</small></div><button type="button" aria-label="移除${name}">×</button>`; row.querySelector("button").addEventListener("click", () => togglePick(name)); els.pickedList.append(row); });
 }
 
 function showViewerPerson(index) {
@@ -830,7 +674,6 @@ function showViewerPerson(index) {
   els.personManagement.classList.add("hidden"); setManagementView("summary");
   const dorm = dormFor(name); const status = statusFor(name); els.personName.textContent = name; els.personPhoto.src = imageFor(student); els.personPhoto.alt = name; els.personPinyin.textContent = student.pinyin || ""; showViewerRole(name); els.personDorm.textContent = `${status}${student.origin ? ` · ${student.origin}` : ""}${dorm ? ` · ${dorm.room.room}${dorm.member.bed ? ` · ${dorm.member.bed}` : ""}` : " · 未登记宿舍"}`;
   els.personStatus.value = status === "待确认" ? "请假" : status; els.leaveUntil.value = state.leaves[name]?.until || ""; els.personNote.value = noteFor(name); renderStatusPicker(); toggleLeaveField();
-  renderPersonDutyParticipation();
   els.personPrev.disabled = state.viewerIndex === 0; els.personNext.disabled = state.viewerIndex === state.viewerNames.length - 1;
   els.personPick.textContent = state.picked.has(name) ? "已加入点人" : "加入点人"; els.personPick.classList.toggle("picked", state.picked.has(name));
 }
@@ -889,19 +732,17 @@ function setMode(mode) {
   if (mode !== "find") state.pickMode = false;
   state.mode = mode; document.querySelectorAll(".mode").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
   els.findView.classList.toggle("hidden", mode !== "find"); els.seatingView.classList.toggle("hidden", mode !== "seating"); els.dutyView.classList.toggle("hidden", mode !== "duty"); els.dormView.classList.toggle("hidden", mode !== "dorm"); els.whereView.classList.toggle("hidden", mode !== "where"); els.batchView.classList.toggle("hidden", mode !== "batch"); els.searchPanel.classList.toggle("hidden", !["find","batch"].includes(mode));
-  if (mode === "seating") renderSeating(); if (mode === "duty") renderDuty(); if (mode === "dorm") renderDorm(); if (mode === "where") renderWhere(); if (mode === "find") renderStudents(); if (mode === "batch") { renderStudents(); renderPicked(); setTimeout(() => els.searchInput.focus(),50); }
+  if (mode === "seating") renderSeating(); if (mode === "duty") { renderDuty(); window.refreshFindDuty?.(); } if (mode === "dorm") renderDorm(); if (mode === "where") renderWhere(); if (mode === "find") renderStudents(); if (mode === "batch") { renderStudents(); renderPicked(); setTimeout(() => els.searchInput.focus(),50); }
 }
 function renderDataStatus() {
   els.dataStatus.textContent = `当前名册 · ${activeStudents().length} 名在读学生 · 照片 ${students().filter((s)=>s.image).length}/${students().length}`;
-  const dutyRoleCount = DUTY_ROLES.filter((role) => state.dutyOps.commissioners[role.id]).length;
-  els.dutyDataStatus.textContent = state.duty ? `${state.duty.weekLabel || state.duty.weekStart || "已导入"} · 劳动委员 ${dutyRoleCount}/4` : "尚未导入";
+  els.dutyDataStatus.textContent = "当天值日通过只读云连接获取";
   els.dormDataStatus.textContent = state.dorm ? `${state.dorm.rooms.length} 间宿舍 · ${state.dorm.rooms.reduce((n,r)=>n+r.members.length,0)} 人` : "尚未导入";
   els.seatingDataStatus.textContent = state.seating ? `${state.seating.dateLabel || state.seating.date || "已导入"} · ${seatingNames().length} 个座位` : "尚未导入";
-  const managed = Object.values(state.management).filter((profile) => profile?.isCadre || profile?.impressionTags?.length || profile?.workNote || profile?.personalTags?.length || profile?.discipline?.length || profile?.contributions?.length || profile?.dutyParticipation === false).length;
+  const managed = Object.values(state.management).filter((profile) => profile?.isCadre || profile?.impressionTags?.length || profile?.workNote || profile?.personalTags?.length || profile?.discipline?.length || profile?.contributions?.length).length;
   const incidents = Object.values(state.management).reduce((count, profile) => count + (Array.isArray(profile?.discipline) ? profile.discipline.length : 0), 0);
   const contributions = Object.values(state.management).reduce((count, profile) => count + (Array.isArray(profile?.contributions) ? profile.contributions.length : 0), 0);
-  const dutyDebtCount = Object.values(state.dutyOps.debts).reduce((count,debt) => count + (debt?.makeup || 0) + (debt?.redo || 0),0);
-  els.managementDataStatus.textContent = `${managed} 人有管理记录 · 违纪 ${incidents} 条 · 贡献 ${contributions} 条 · 值日待办 ${dutyDebtCount} 次 · 仅存本机`;
+  els.managementDataStatus.textContent = `${managed} 人有管理记录 · 违纪 ${incidents} 条 · 贡献 ${contributions} 条 · 仅存本机`;
 }
 function renderAll() {
   const ready = Boolean(state.studentsPack || state.seating); els.setup.classList.toggle("hidden",ready); els.app.classList.toggle("hidden",!ready); els.dataButton.classList.toggle("hidden",!ready); if (!ready) return;
@@ -911,7 +752,7 @@ function renderAll() {
 let toastTimer; function toast(message) { els.toast.textContent = message; els.toast.classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(() => els.toast.classList.remove("show"),2200); }
 
 document.querySelectorAll(".mode").forEach((button) => button.addEventListener("click", () => setMode(button.dataset.mode)));
-els.searchInput.addEventListener("input", (e) => { state.query = e.target.value.trim(); renderStudents(); }); els.clearSearch.addEventListener("click", () => { state.query=""; els.searchInput.value=""; renderStudents(); els.searchInput.focus(); }); els.daySelect.addEventListener("change", () => renderDuty(els.daySelect.value));
+els.searchInput.addEventListener("input", (e) => { state.query = e.target.value.trim(); renderStudents(); }); els.clearSearch.addEventListener("click", () => { state.query=""; els.searchInput.value=""; renderStudents(); els.searchInput.focus(); });
 els.genderFilters.addEventListener("click", (event) => { const button = event.target.closest("[data-gender]"); if (!button) return; state.genderFilter = button.dataset.gender; renderStudents(); });
 els.layoutToggle.addEventListener("click", () => { state.findLayout = state.findLayout === "grid" ? "cards" : "grid"; localStorage.setItem("find-person-layout",state.findLayout); renderStudents(); });
 els.pickModeToggle.addEventListener("click", () => { if (state.pickMode) { state.pickMode = false; setMode("batch"); return; } state.pickMode = true; renderStudents(); toast("点人物卡任意位置连续选人"); });
@@ -932,11 +773,8 @@ els.seatingSetupPrintFile.addEventListener("change", async (event) => {
   setMode("seating");
   requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
 });
-els.dutyTeamButton.addEventListener("click", () => openCommissionerDialog("floor")); els.commissionerSearch.addEventListener("input",renderCommissionerCandidates);
-els.clearCommissioner.addEventListener("click", async () => { state.dutyOps.commissioners[state.commissionerRole] = null; await persistDutyOps(); renderCommissionerRoles(); renderCommissionerCandidates(); renderCommissioners(); renderDataStatus(); toast("该岗位已设为空缺，可随时换人"); });
-els.saveDutyAction.addEventListener("click",saveDutyInspection);
-els.studentSetupFile.addEventListener("change", (e) => importDataFile(e.target.files[0],"students")); els.studentFile.addEventListener("change", (e) => importDataFile(e.target.files[0],"students")); els.dutyFile.addEventListener("change", (e) => importDataFile(e.target.files[0],"duty")); els.dormFile.addEventListener("change", (e) => importDataFile(e.target.files[0],"dorm")); els.seatingFile.addEventListener("change", (e) => importDataFile(e.target.files[0],"seating")); els.managementFile.addEventListener("change", (e) => importDataFile(e.target.files[0],"management"));
-els.dataButton.addEventListener("click", () => { renderDataStatus(); els.dataDialog.showModal(); }); els.exportStudents.addEventListener("click", () => exportJS("FIND_PERSON_STUDENTS_DATA",state.studentsPack,`students-data-${TODAY}.js`)); els.exportDuty.addEventListener("click", () => exportJS("FIND_PERSON_DUTY_DATA",dutyExportPayload(),`duty-data-${state.duty?.weekStart || TODAY}.js`)); els.exportDorm.addEventListener("click", () => exportJS("FIND_PERSON_DORM_DATA",state.dorm,`dorm-data-${TODAY}.js`)); els.exportSeating.addEventListener("click", () => exportJS("FIND_PERSON_SEATING_DATA",state.seating,`seating-data-${state.seating?.date || TODAY}.js`));
+els.studentSetupFile.addEventListener("change", (e) => importDataFile(e.target.files[0],"students")); els.studentFile.addEventListener("change", (e) => importDataFile(e.target.files[0],"students")); els.dormFile.addEventListener("change", (e) => importDataFile(e.target.files[0],"dorm")); els.seatingFile.addEventListener("change", (e) => importDataFile(e.target.files[0],"seating")); els.managementFile.addEventListener("change", (e) => importDataFile(e.target.files[0],"management"));
+els.dataButton.addEventListener("click", () => { renderDataStatus(); els.dataDialog.showModal(); }); els.exportStudents.addEventListener("click", () => exportJS("FIND_PERSON_STUDENTS_DATA",state.studentsPack,`students-data-${TODAY}.js`)); els.exportDorm.addEventListener("click", () => exportJS("FIND_PERSON_DORM_DATA",state.dorm,`dorm-data-${TODAY}.js`)); els.exportSeating.addEventListener("click", () => exportJS("FIND_PERSON_SEATING_DATA",state.seating,`seating-data-${state.seating?.date || TODAY}.js`));
 els.exportManagement.addEventListener("click", () => exportJS("FIND_PERSON_MANAGEMENT_DATA",managementExportPayload(),`management-data-${TODAY}.js`));
 els.forgetData.addEventListener("click", async () => { if (!window.confirm("确定清除这台设备上的学生、值日、宿舍、座位、历史留存和管理记录吗？请先导出需要的备份。")) return; await clearDB(); state.studentsPack=state.duty=state.dorm=state.seating=null; state.whereabouts={}; state.leaves={}; state.history={}; state.management={}; state.dutyOps=normalizeDutyOps(null); state.autoArchive=true; els.autoArchive.checked=true; state.picked.clear(); persistPicked(); els.dataDialog.close(); renderAll(); toast("已清除本机全部数据"); });
 els.batchNote.value = localStorage.getItem("find-person-note") || ""; els.batchNote.addEventListener("input", () => localStorage.setItem("find-person-note",els.batchNote.value)); els.clearBatch.addEventListener("click", () => { state.picked.clear(); persistPicked(); renderPicked(); renderStudents(); toast("已清空点名组"); });
@@ -947,7 +785,6 @@ els.personPrev.addEventListener("click", () => { els.personEditor.classList.add(
 els.personNext.addEventListener("click", () => { els.personEditor.classList.add("hidden"); els.personManagement.classList.add("hidden"); showViewerPerson(state.viewerIndex + 1); });
 els.personPick.addEventListener("click", () => { const index = state.viewerIndex; togglePick(state.currentPerson); showViewerPerson(index); });
 els.togglePersonEditor.addEventListener("click", () => { els.personManagement.classList.add("hidden"); els.personEditor.classList.remove("hidden"); }); els.closePersonEditor.addEventListener("click", () => els.personEditor.classList.add("hidden"));
-els.personDutyParticipation.addEventListener("change", () => setDutyParticipation(state.currentPerson, els.personDutyParticipation.checked));
 els.closeManagement.addEventListener("click", () => els.personManagement.classList.add("hidden"));
 els.toggleCadre.addEventListener("click", openCadreEditor);
 els.cadreRoleInput.addEventListener("input", renderCadreRolePicker); els.cancelCadre.addEventListener("click", () => setManagementView("summary")); els.saveCadre.addEventListener("click", saveCadre); els.removeCadre.addEventListener("click", removeCadreRole);
@@ -1001,13 +838,13 @@ document.addEventListener("visibilitychange", async () => {
 (async () => {
   try {
     const [studentsData,duty,dorm,seating,legacy,whereToday,whereCurrent,leaves,history,autoArchive,management,dutyOps] = await Promise.all([dbGet("students"),dbGet("duty"),dbGet("dorm"),dbGet("seating"),dbGet("active"),dbGet(`where:${TODAY}`),dbGet("where:current"),dbGet("leaves"),dbGet("attendance-history-v1"),dbGet("attendance-auto"),dbGet("management-v1"),dbGet("duty-ops-v1")]);
-    state.studentsPack=studentsData; state.duty=duty; state.dorm=dorm; state.seating=seating; state.whereabouts=whereCurrent||whereToday||{}; state.leaves=leaves||{}; state.history=history||{}; state.management=management||{}; state.dutyOps=normalizeDutyOps(dutyOps); mergeDutyCommissioners(state.duty); state.autoArchive=autoArchive !== false; els.autoArchive.checked=state.autoArchive;
+    state.studentsPack=studentsData; state.duty=duty; state.dorm=dorm; state.seating=seating; state.whereabouts=whereCurrent||whereToday||{}; state.leaves=leaves||{}; state.history=history||{}; state.management=management||{}; state.dutyOps=normalizeDutyOps(dutyOps); state.autoArchive=autoArchive !== false; els.autoArchive.checked=state.autoArchive;
     const managementMigrated = migrateDutyParticipation(state.management);
     if (ensureStudentIds(state.studentsPack)) await dbSet("students", state.studentsPack);
     if (state.duty?.commissioners) await dbSet("duty-ops-v1",state.dutyOps);
     if (managementMigrated) await dbSet("management-v1", state.management);
     if (!whereCurrent && whereToday) await dbSet("where:current", state.whereabouts);
-    if (!state.studentsPack && legacy?.students) { state.studentsPack={version:legacy.version,className:legacy.className,students:legacy.students}; ensureStudentIds(state.studentsPack); state.duty=state.duty||legacy.duty||null; state.dorm=state.dorm||legacy.dorm||null; state.seating=state.seating||legacy.seating||null; mergeDutyCommissioners(state.duty); await Promise.all([dbSet("students",state.studentsPack),dbSet("duty",state.duty),dbSet("dorm",state.dorm),dbSet("seating",state.seating),dbSet("duty-ops-v1",state.dutyOps)]); }
+    if (!state.studentsPack && legacy?.students) { state.studentsPack={version:legacy.version,className:legacy.className,students:legacy.students}; ensureStudentIds(state.studentsPack); state.duty=state.duty||legacy.duty||null; state.dorm=state.dorm||legacy.dorm||null; state.seating=state.seating||legacy.seating||null; await Promise.all([dbSet("students",state.studentsPack),dbSet("duty",state.duty),dbSet("dorm",state.dorm),dbSet("seating",state.seating),dbSet("duty-ops-v1",state.dutyOps)]); }
   } catch { toast("无法读取本机数据"); }
   renderAll();
   if (state.studentsPack && state.autoArchive) await saveDailySnapshot("打开应用");

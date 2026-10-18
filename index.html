@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="styles.css?v=20261018-2">
+  <link rel="stylesheet" href="styles.css?v=20261018-readonly1">
 </head>
 <body>
   <header class="topbar">
@@ -80,13 +80,9 @@
       <section id="dutyView" class="view hidden">
         <div class="duty-head">
           <div><p id="dateLabel" class="eyebrow"></p><h2 id="dutyTitle">今日值日</h2></div>
-          <div class="duty-head-actions"><button id="dutyTeamButton" class="secondary-button compact-button" type="button">劳动委员</button><select id="daySelect" aria-label="选择星期"></select></div>
+          <div class="duty-head-actions"><button id="dutyConnect" class="secondary-button compact-button" type="button">☁️ 连接</button><button id="dutyRefresh" class="secondary-button compact-button" type="button">刷新</button></div>
         </div>
         <p id="dutyWeekNotice" class="data-notice"></p>
-        <section class="duty-control-card">
-          <div id="commissionerStrip" class="commissioner-strip"></div>
-          <div id="dutyDebtList" class="duty-debt-list"></div>
-        </section>
         <div id="dutyList" class="duty-list"></div>
       </section>
 
@@ -120,10 +116,10 @@
       <div class="dialog-head"><h2>数据管理</h2><button value="cancel" aria-label="关闭">×</button></div>
       <p id="dataStatus"></p>
       <section class="data-block"><h3>学生头像总库</h3><p>包含全班姓名、拼音和照片。可整包导入、备份或换机。</p><div class="data-actions"><label class="secondary-button file-button">导入总库<input id="studentFile" type="file" accept=".js,text/javascript,application/javascript"></label><button id="exportStudents" class="secondary-button" type="button">导出总库</button></div></section>
-      <section class="data-block"><h3>每周值日 JS</h3><p id="dutyDataStatus">尚未导入</p><div class="data-actions"><label class="secondary-button file-button">替换值日<input id="dutyFile" type="file" accept=".js,text/javascript,application/javascript"></label><button id="exportDuty" class="secondary-button" type="button">导出当前</button></div></section>
+      <section class="data-block"><h3>当天值日</h3><p id="dutyDataStatus">通过值日标签中的只读连接查看</p></section>
       <section class="data-block"><h3>宿舍成员 JS</h3><p id="dormDataStatus">尚未导入</p><div class="data-actions"><label class="secondary-button file-button">替换宿舍<input id="dormFile" type="file" accept=".js,text/javascript,application/javascript"></label><button id="exportDorm" class="secondary-button" type="button">导出当前</button></div></section>
       <section class="data-block"><h3>座位表 JS</h3><p id="seatingDataStatus">尚未导入</p><div class="data-actions"><label class="secondary-button file-button">替换座位表<input id="seatingFile" type="file" accept=".js,text/javascript,application/javascript"></label><button id="exportSeating" class="secondary-button" type="button">导出当前</button></div></section>
-      <section class="data-block"><h3>学生管理记录</h3><p id="managementDataStatus">第一印象、违纪与值日责任只保存在本机</p><div class="data-actions"><label class="secondary-button file-button">导入备份<input id="managementFile" type="file" accept=".js,text/javascript,application/javascript"></label><button id="exportManagement" class="secondary-button" type="button">导出备份</button></div></section>
+      <section class="data-block"><h3>学生管理记录</h3><p id="managementDataStatus">第一印象、违纪与贡献只保存在本机</p><div class="data-actions"><label class="secondary-button file-button">导入备份<input id="managementFile" type="file" accept=".js,text/javascript,application/javascript"></label><button id="exportManagement" class="secondary-button" type="button">导出备份</button></div></section>
       <button id="forgetData" class="text-button danger full" type="button">清除本机全部数据</button>
       <p class="fineprint">各数据包彼此独立。替换值日、宿舍、座位表或管理记录不会改动学生照片。</p>
     </form>
@@ -139,23 +135,7 @@
     </form>
   </dialog>
 
-  <dialog id="commissionerDialog" class="picker-dialog">
-    <form method="dialog">
-      <div class="dialog-head"><div><p class="eyebrow">岗位与姓名分开保存</p><h2>调整劳动委员</h2></div><button value="cancel" aria-label="关闭">×</button></div>
-      <div id="commissionerRoleButtons" class="role-picker"></div>
-      <div class="picker-search"><input id="commissionerSearch" type="search" autocomplete="off" placeholder="姓名 / 拼音 / 首字母"><button id="clearCommissioner" class="text-button danger" type="button">暂时空缺</button></div>
-      <div id="commissionerCandidates" class="candidate-grid"></div>
-    </form>
-  </dialog>
 
-  <dialog id="dutyActionDialog" class="picker-dialog">
-    <form method="dialog">
-      <div class="dialog-head"><div><p id="dutyActionEyebrow" class="eyebrow">值日处理</p><h2 id="dutyActionTitle">安排补位</h2></div><button value="cancel" aria-label="关闭">×</button></div>
-      <p id="dutyActionHint" class="action-hint"></p>
-      <div id="dutyActionCandidates" class="candidate-grid"></div>
-      <button id="saveDutyAction" class="primary-button full-button hidden" type="button">保存返工名单</button>
-    </form>
-  </dialog>
 
   <dialog id="personDialog" class="person-dialog">
     <form method="dialog" class="person-viewer">
@@ -171,9 +151,6 @@
           <p id="personDorm"></p>
         </div>
       </div>
-      <section class="person-rotation" aria-label="轮值状态">
-        <label class="rotation-toggle"><span><strong>参加轮值</strong><small id="personDutyParticipationHint">默认参加，普通请假不会改变</small></span><input id="personDutyParticipation" type="checkbox" checked><i aria-hidden="true"></i></label>
-      </section>
       <section id="personManagement" class="person-management hidden" aria-label="学生管理摘要">
         <div class="management-head"><div><small>全屏快速一览</small><h3 id="managementTitle">管理摘要</h3></div><button id="closeManagement" type="button" aria-label="关闭管理摘要">×</button></div>
         <div id="managementSummaryView">
@@ -233,6 +210,7 @@
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=20261018-2" defer></script>
+  <script src="app.js?v=20261018-readonly1" defer></script>
+  <script src="duty-readonly.js?v=20261018-readonly1" defer></script>
 </body>
 </html>
