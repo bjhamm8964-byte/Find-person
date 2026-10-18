@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="styles.css?v=20261018-readonly1">
+  <link rel="stylesheet" href="styles.css?v=20261018-homework1">
 </head>
 <body>
   <header class="topbar">
@@ -106,10 +106,21 @@
         <div class="section-heading"><div><p class="eyebrow">临时点名组</p><h2>要交代的人</h2></div><button id="clearBatch" class="text-button danger" type="button">清空</button></div>
         <textarea id="batchNote" rows="3" placeholder="备注要交代的事情"></textarea>
         <div id="pickedList" class="picked-list"></div>
-        <div class="batch-actions"><button id="copyBatch" class="primary-button" type="button">复制名单与备注</button></div>
+        <div class="batch-actions"><button id="checkHomework" class="secondary-button" type="button">作业核对</button><button id="copyBatch" class="primary-button" type="button">复制名单与备注</button></div>
       </section>
     </div>
   </main>
+
+  <dialog id="homeworkDialog" class="homework-dialog" aria-labelledby="homeworkTitle">
+    <form method="dialog">
+      <div class="dialog-head"><h2 id="homeworkTitle">作业核对</h2><button value="cancel" aria-label="关闭作业核对">×</button></div>
+      <p class="homework-hint">已选人员视为已交；仅核对当前在班学生。不在班人员单独列出。</p>
+      <p id="homeworkSummary"></p>
+      <section><h3 id="homeworkMissingTitle">未交作业</h3><div id="homeworkMissing" class="homework-names"></div></section>
+      <section><h3 id="homeworkAwayTitle">不在班，未计入未交</h3><div id="homeworkAway" class="homework-names"></div></section>
+      <button class="primary-button full-button" value="done">知道了</button>
+    </form>
+  </dialog>
 
   <dialog id="dataDialog" class="data-dialog">
     <form method="dialog">
@@ -210,7 +221,7 @@
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=20261018-readonly1" defer></script>
+  <script src="app.js?v=20261018-homework1" defer></script>
   <script src="duty-readonly.js?v=20261018-readonly1" defer></script>
 </body>
 </html>

@@ -220,7 +220,14 @@ textarea:focus, .search-box:focus-within { border-color: rgba(31,91,70,.55); box
 .picked-person img { width: 50px; height: 50px; border-radius: 15px; object-fit: cover; background: var(--green-2); }
 .picked-person strong { font-size: 16px; }
 .picked-person button { width: 34px; height: 34px; border: 0; background: transparent; color: var(--danger); font-size: 22px; }
-.batch-actions { padding: 18px 20px; }
+.batch-actions { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.35fr); gap: 10px; padding: 18px 20px; }
+.batch-actions > button { min-width: 0; padding-inline: 8px; }
+.homework-dialog form { max-height: 82vh; max-height: 82dvh; overflow-y: auto; }
+.homework-dialog h3 { margin: 20px 0 10px; font-size: 16px; }
+.homework-hint { font-size: 13px; }
+.homework-names { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.homework-name { padding: 8px 11px; border-radius: 10px; color: var(--ink); background: var(--green-2); overflow-wrap: anywhere; }
+#homeworkMissing .homework-name { background: #f8dfd7; }
 .batch-actions .primary-button { width: 100%; }
 .text-button { border: 0; background: transparent; color: var(--green); font-weight: 700; }
 .text-button.danger { color: var(--danger); }

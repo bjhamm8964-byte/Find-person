@@ -28,6 +28,7 @@ const ids = [
   "personManagement","closeManagement","managementTitle","managementSummaryView","impressionSummary","managementNote","leaveCount","contributionCount","disciplineCount","disciplineLevel","advancementLevel","latestDiscipline","toggleCadre","editImpression","addDiscipline","cadreEditor","cadreRoleButtons","cadreRoleInput","removeCadre","cancelCadre","saveCadre","impressionEditor","impressionButtons","managementNoteInput","cancelImpression","saveImpression","disciplineEditor","managementRecordKindButtons","disciplineOnlyFields","disciplineTypeButtons","disciplineSeverityButtons","recordFactLabel","disciplineFact","cancelDiscipline","saveDiscipline","toast"
 ];
 ids.push("personalTagList", "addPersonalTag");
+ids.push("checkHomework", "homeworkDialog", "homeworkSummary", "homeworkMissingTitle", "homeworkMissing", "homeworkAwayTitle", "homeworkAway");
 const els = Object.fromEntries(ids.map((id) => [id, $(id)]));
 
 function openDB() {
@@ -661,6 +662,31 @@ function renderWhere() {
   });
 }
 
+function homeworkCheck(records, picked) {
+  const present = records.filter((record) => record.status === "在班");
+  return {
+    total: records.length,
+    present: present.length,
+    submitted: present.filter((record) => picked.has(record.name)).length,
+    missing: present.filter((record) => !picked.has(record.name)),
+    away: records.filter((record) => record.status !== "在班"),
+  };
+}
+async function openHomeworkCheck() {
+  await handleDayChange();
+  const result = homeworkCheck(currentRecords(), state.picked);
+  if (!result.total) return toast("请先导入学生总库");
+  els.homeworkSummary.textContent = `${localDateKey()} · 在册 ${result.total} 人 · 在班 ${result.present} 人 · 在班已交 ${result.submitted} 人`;
+  els.homeworkMissingTitle.textContent = `未交作业 ${result.missing.length} 人`;
+  els.homeworkAwayTitle.textContent = `不在班 ${result.away.length} 人（未计入未交）`;
+  const renderNames = (container, records, showStatus) => {
+    container.replaceChildren();
+    if (!records.length) { const empty = document.createElement("p"); empty.textContent = "无"; container.append(empty); return; }
+    records.forEach((record) => { const chip = document.createElement("span"); chip.className = "homework-name"; chip.textContent = showStatus ? `${record.name} · ${record.status}` : record.name; container.append(chip); });
+  };
+  renderNames(els.homeworkMissing,result.missing,false); renderNames(els.homeworkAway,result.away,true);
+  els.homeworkDialog.showModal();
+}
 function renderPicked() {
   els.pickedList.replaceChildren(); if (!state.picked.size) { els.pickedList.append(emptyNode("先在上方搜索，再轻点照片加入")); return; }
   [...state.picked].forEach((name) => { const student = studentByName(name); const row = document.createElement("div"); row.className = "picked-person"; row.innerHTML = `<img alt="${name}" src="${imageFor(student)}"><div><strong>${name}</strong><small>${statusFor(name)}</small></div><button type="button" aria-label="移除${name}">×</button>`; row.querySelector("button").addEventListener("click", () => togglePick(name)); els.pickedList.append(row); });
@@ -778,6 +804,7 @@ els.dataButton.addEventListener("click", () => { renderDataStatus(); els.dataDia
 els.exportManagement.addEventListener("click", () => exportJS("FIND_PERSON_MANAGEMENT_DATA",managementExportPayload(),`management-data-${TODAY}.js`));
 els.forgetData.addEventListener("click", async () => { if (!window.confirm("确定清除这台设备上的学生、值日、宿舍、座位、历史留存和管理记录吗？请先导出需要的备份。")) return; await clearDB(); state.studentsPack=state.duty=state.dorm=state.seating=null; state.whereabouts={}; state.leaves={}; state.history={}; state.management={}; state.dutyOps=normalizeDutyOps(null); state.autoArchive=true; els.autoArchive.checked=true; state.picked.clear(); persistPicked(); els.dataDialog.close(); renderAll(); toast("已清除本机全部数据"); });
 els.batchNote.value = localStorage.getItem("find-person-note") || ""; els.batchNote.addEventListener("input", () => localStorage.setItem("find-person-note",els.batchNote.value)); els.clearBatch.addEventListener("click", () => { state.picked.clear(); persistPicked(); renderPicked(); renderStudents(); toast("已清空点名组"); });
+els.checkHomework.addEventListener("click", openHomeworkCheck);
 els.copyBatch.addEventListener("click", async () => { if (!state.picked.size) return toast("还没有选择学生"); const text=batchSummaryText([...state.picked],els.batchNote.value); try { await navigator.clipboard.writeText(text); toast("名单与备注已复制"); } catch { window.prompt("长按复制",text); } });
 els.copyWhereSummary.addEventListener("click", async () => { const text = whereaboutsSummaryText(); try { await navigator.clipboard.writeText(text); toast("今日去向信息已复制"); } catch { window.prompt("长按复制", text); } });
 els.personPhotoFile.addEventListener("change", async (e) => { if (!e.target.files[0]) return; try { state.pendingPhoto=await compressPhoto(e.target.files[0]); els.personPhoto.src=state.pendingPhoto; toast("照片已处理，点保存生效"); } catch { toast("照片处理失败"); } }); els.savePerson.addEventListener("click",savePerson);
