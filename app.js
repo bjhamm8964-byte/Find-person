@@ -620,12 +620,12 @@ function smallPerson(student, name, status = "在班", subtext = "") {
 }
 
 function renderDuty() {
-  const view=window.FindDuty||{},date=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai'}).format(new Date());
+  const view=window.FindDuty||{},today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai'}).format(new Date()),date=view.date||today;
   const current=view.date===date,plan=current?view.plan:null;
-  els.dateLabel.textContent=date;els.dutyTitle.textContent='今日值日 · 只读';els.dutyList.replaceChildren();
+  els.dateLabel.textContent=date;els.dutyTitle.textContent=(date===today?'今日':date<today?'昨日':'明日')+'值日 · 只读';els.dutyList.replaceChildren();
   const synced=current&&view.lastSync?new Date(view.lastSync).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}):'';
   els.dutyWeekNotice.textContent=!view.connected?'请先连接：导入教室白板只读连接文件。':view.error?view.error+(synced?' · 显示缓存，最后获取 '+synced:' · 暂无当天缓存'):'最后获取 '+(synced||'尚未获取')+' · 仅显示值日App已发布安排';
-  if(!plan){els.dutyList.append(emptyNode(!view.connected?'连接后查看当天安排':view.error?'暂时无法获取当天安排':'今日尚未发布'));return;}
+  if(!plan){els.dutyList.append(emptyNode(!view.connected?'连接后查看所选日期安排':view.error?'暂时无法获取所选日期安排':'该日期尚未发布'));return;}
   for(const row of plan.assignments){
     const section=document.createElement('section');section.className='duty-group';const heading=document.createElement('h3');heading.textContent=row.area+' · '+row.task;section.append(heading);
     const strip=document.createElement('div');strip.className='avatar-strip';

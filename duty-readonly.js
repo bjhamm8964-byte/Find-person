@@ -22,9 +22,19 @@ document.body.dataset.dutyCloudRole="board";
 
 (function(){
  const cloud=window.DutyCloud, key='find-person-duty-readonly-cache-v1';
- let generation=0, busy=false;
+ let generation=0, busy=false, days={},today='',selected='';
  window.FindDuty={date:'',plan:null,lastSync:'',error:'',connected:false};
  const dateKey=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai'}).format(new Date());
+ const dates=()=>[-1,0,1].map(offset=>{const d=new Date(dateKey()+'T12:00:00+08:00');d.setUTCDate(d.getUTCDate()+offset);return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai'}).format(d);});
+ const calendar=document.createElement('div');calendar.className='duty-calendar';calendar.setAttribute('aria-label','选择值日日期');$('dutyWeekNotice').before(calendar);
+ function show(){
+  const range=dates();if(today!==range[1]){today=range[1];selected=today;}
+  for(const date of Object.keys(days))if(!range.includes(date))delete days[date];
+  const entry=days[selected]||{};
+  Object.assign(FindDuty,{date:selected,plan:entry.plan||null,lastSync:entry.lastSync||'',error:entry.error||'',connected:cloud.ready()});
+  calendar.replaceChildren();range.forEach((date,index)=>{const button=document.createElement('button');button.type='button';button.className='secondary-button compact-button';button.setAttribute('aria-pressed',String(date===selected));button.textContent=['昨天','今天','明天'][index]+' '+date.slice(5);button.onclick=()=>{selected=date;show();sync();};calendar.append(button);});renderDuty();
+ }
+ function save(){try{localStorage.setItem(key,JSON.stringify({scope:cloud.getConfig().scope,days}));}catch{for(const date of dates())if(days[date])days[date].error='缓存空间不足，关闭后可能无法离线查看';}}
  function validate(plan,date){
   if(plan?.schema!=='duty-board-v1'||plan.version!==1||plan.date!==date||!Array.isArray(plan.assignments)||plan.assignments.length>100)throw Error('公告格式或日期错误');
   for(const row of plan.assignments){if(typeof row.area!=='string'||typeof row.task!=='string'||!Array.isArray(row.names)||row.names.length>20||row.names.some(n=>typeof n!=='string'||!n.trim()||n.length>60))throw Error('公告岗位格式错误');}
@@ -32,29 +42,27 @@ document.body.dataset.dutyCloudRole="board";
  }
  async function sync(){
   if(busy||!cloud.ready())return;
-  busy=true;const ticket=generation,date=dateKey();$('dutyRefresh').disabled=true;
-  if(FindDuty.date!==date){FindDuty.date=date;FindDuty.plan=null;FindDuty.lastSync='';}FindDuty.error='正在获取…';renderDuty();
+  busy=true;const ticket=generation,range=dates();$('dutyRefresh').disabled=true;
+  range.forEach(date=>{days[date]={...days[date],error:'正在获取…'};});show();
   try{
-   const result=await cloud.request({action:'read',dates:[date]});
-   if(ticket!==generation)return;
-   if(result.access!=='board')throw Error('请使用白板只读连接文件');
-   const entry=result.entries?.find(e=>e.date===date);if(!entry)throw Error('公告响应缺少当天日期');
-   if(entry.revision!==null&&!entry.plan)throw Error('公告响应不完整');
-   const plan=entry.revision===null?null:validate(entry.plan,date);
-   Object.assign(FindDuty,{date,plan,lastSync:new Date().toISOString(),error:''});
-   try{localStorage.setItem(key,JSON.stringify({...FindDuty,scope:cloud.getConfig().scope}));}catch{FindDuty.error='缓存空间不足';}
-  }catch(e){if(ticket===generation)FindDuty.error='获取失败：'+e.message;}
-  finally{busy=false;$('dutyRefresh').disabled=false;renderDuty();if(ticket!==generation&&cloud.ready())sync();}
+   // The cloud endpoint accepts at most two dates per request.
+   await Promise.all([[range[1],range[2]],[range[0]]].map(async batch=>{
+    try{const result=await cloud.request({action:'read',dates:batch});if(ticket!==generation)return;if(result.access!=='board')throw Error('请使用白板只读连接文件');
+     for(const date of batch){const entry=result.entries?.find(e=>e.date===date);if(!entry)throw Error('公告响应缺少日期');if(entry.revision!==null&&!entry.plan)throw Error('公告响应不完整');const plan=entry.revision===null?null:validate(entry.plan,date);days[date]={plan,lastSync:new Date().toISOString(),error:''};}
+    }catch(e){if(ticket===generation)batch.forEach(date=>{days[date]={...days[date],error:'获取失败：'+e.message};});}
+   }));
+   if(ticket===generation){show();save();}
+  }finally{busy=false;$('dutyRefresh').disabled=false;show();if(ticket!==generation&&cloud.ready())sync();}
  }
  function configure(){
-  generation++;Object.assign(FindDuty,{date:dateKey(),plan:null,lastSync:'',error:'',connected:cloud.ready()});
-  try{const cached=JSON.parse(localStorage.getItem(key)||'null');if(cloud.ready()&&cached?.scope===cloud.getConfig().scope&&cached.date===dateKey()){FindDuty.plan=cached.plan?validate(cached.plan,cached.date):null;FindDuty.lastSync=cached.lastSync;}}catch{}
-  renderDuty();if(cloud.ready())sync();
+  generation++;days={};today=dateKey();selected=today;
+  try{const cached=JSON.parse(localStorage.getItem(key)||'null');if(cloud.ready()&&cached?.scope===cloud.getConfig().scope){const stored=cached.days||(cached.date?{[cached.date]:cached}:{});for(const date of dates()){const entry=stored[date];if(entry)days[date]={plan:entry.plan?validate(entry.plan,date):null,lastSync:entry.lastSync||'',error:''};}}}catch{}
+  show();if(cloud.ready())sync();
  }
  window.refreshFindDuty=sync;$('dutyConnect').onclick=cloud.open;$('dutyRefresh').onclick=sync;
  window.addEventListener('duty-cloud-config',configure);
  window.addEventListener('online',()=>{if(state.mode==='duty')sync();});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.mode==='duty')sync();});
- setInterval(()=>{if(FindDuty.date!==dateKey()){FindDuty.date=dateKey();FindDuty.plan=null;FindDuty.lastSync='';renderDuty();if(state.mode==='duty')sync();}},30000);
+ setInterval(()=>{if(today!==dateKey()){show();save();if(cloud.ready())sync();}},30000);
  configure();
 })();
