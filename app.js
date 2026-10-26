@@ -543,8 +543,8 @@ function renderSeating() {
   const unmatched = state.studentsPack ? allNames.filter((name) => !studentByName(name)) : [];
   els.seatingDate.textContent = state.seating.dateLabel || state.seating.date || "已导入座位表";
   els.seatingCount.textContent = `${allNames.length} 个座位`;
-  els.seatingPrintTitle.textContent = studentView ? `${state.seating.className || state.studentsPack?.className || "班级"}自习纪律记录` : `${state.seating.className || state.studentsPack?.className || "班级"}临时座位表`;
-  els.seatingPrintMeta.textContent = studentView ? "日期：____年____月____日　自习：第____节　记录人：________" : `调整日期：${state.seating.dateLabel || state.seating.date || "未注明"}　座位方向：讲台在下方`;
+  els.seatingPrintTitle.textContent = studentView ? `${state.seating.className || state.studentsPack?.className || "班级"}课堂纪律记录` : `${state.seating.className || state.studentsPack?.className || "班级"}临时座位表`;
+  els.seatingPrintMeta.textContent = studentView ? "日期：____年____月____日　第____节　记录人：________" : `调整日期：${state.seating.dateLabel || state.seating.date || "未注明"}　座位方向：讲台在下方`;
   els.seatingPrintInstruction.textContent = studentView ? "请在吵闹区域画圈；只圈位置，不写原因。" : "";
   els.seatingPerspectiveToggle.textContent = studentView ? "教师视角" : "学生视角";
   els.seatingPerspectiveToggle.classList.toggle("active", studentView);
