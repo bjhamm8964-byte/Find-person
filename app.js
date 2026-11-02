@@ -758,7 +758,7 @@ function setMode(mode) {
   if (mode !== "find") state.pickMode = false;
   state.mode = mode; document.querySelectorAll(".mode").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
   els.findView.classList.toggle("hidden", mode !== "find"); els.seatingView.classList.toggle("hidden", mode !== "seating"); els.dutyView.classList.toggle("hidden", mode !== "duty"); els.dormView.classList.toggle("hidden", mode !== "dorm"); els.whereView.classList.toggle("hidden", mode !== "where"); els.batchView.classList.toggle("hidden", mode !== "batch"); els.searchPanel.classList.toggle("hidden", !["find","batch"].includes(mode));
-  if (mode === "seating") { renderSeating(); window.refreshFindSeating?.(); } if (mode === "duty") { renderDuty(); window.refreshFindDuty?.(); } if (mode === "dorm") renderDorm(); if (mode === "where") renderWhere(); if (mode === "find") renderStudents(); if (mode === "batch") { renderStudents(); renderPicked(); setTimeout(() => els.searchInput.focus(),50); }
+  if (mode === "seating") renderSeating(); if (mode === "duty") { renderDuty(); window.refreshFindDuty?.(); } if (mode === "dorm") renderDorm(); if (mode === "where") renderWhere(); if (mode === "find") renderStudents(); if (mode === "batch") { renderStudents(); renderPicked(); setTimeout(() => els.searchInput.focus(),50); }
 }
 function renderDataStatus() {
   els.dataStatus.textContent = `当前名册 · ${activeStudents().length} 名在读学生 · 照片 ${students().filter((s)=>s.image).length}/${students().length}`;
