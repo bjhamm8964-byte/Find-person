@@ -758,7 +758,7 @@ function setMode(mode) {
   if (mode !== "find") state.pickMode = false;
   state.mode = mode; document.querySelectorAll(".mode").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
   els.findView.classList.toggle("hidden", mode !== "find"); els.seatingView.classList.toggle("hidden", mode !== "seating"); els.dutyView.classList.toggle("hidden", mode !== "duty"); els.dormView.classList.toggle("hidden", mode !== "dorm"); els.whereView.classList.toggle("hidden", mode !== "where"); els.batchView.classList.toggle("hidden", mode !== "batch"); els.searchPanel.classList.toggle("hidden", !["find","batch"].includes(mode));
-  if (mode === "seating") renderSeating(); if (mode === "duty") { renderDuty(); window.refreshFindDuty?.(); } if (mode === "dorm") renderDorm(); if (mode === "where") renderWhere(); if (mode === "find") renderStudents(); if (mode === "batch") { renderStudents(); renderPicked(); setTimeout(() => els.searchInput.focus(),50); }
+  if (mode === "seating") { renderSeating(); window.refreshFindSeating?.(); } if (mode === "duty") { renderDuty(); window.refreshFindDuty?.(); } if (mode === "dorm") renderDorm(); if (mode === "where") renderWhere(); if (mode === "find") renderStudents(); if (mode === "batch") { renderStudents(); renderPicked(); setTimeout(() => els.searchInput.focus(),50); }
 }
 function renderDataStatus() {
   els.dataStatus.textContent = `当前名册 · ${activeStudents().length} 名在读学生 · 照片 ${students().filter((s)=>s.image).length}/${students().length}`;
@@ -862,7 +862,7 @@ document.addEventListener("visibilitychange", async () => {
   else if (state.autoArchive && state.studentsPack) await saveDailySnapshot("离开应用自动留存");
 });
 
-(async () => {
+window.findPersonReady=(async () => {
   try {
     const [studentsData,duty,dorm,seating,legacy,whereToday,whereCurrent,leaves,history,autoArchive,management,dutyOps] = await Promise.all([dbGet("students"),dbGet("duty"),dbGet("dorm"),dbGet("seating"),dbGet("active"),dbGet(`where:${TODAY}`),dbGet("where:current"),dbGet("leaves"),dbGet("attendance-history-v1"),dbGet("attendance-auto"),dbGet("management-v1"),dbGet("duty-ops-v1")]);
     state.studentsPack=studentsData; state.duty=duty; state.dorm=dorm; state.seating=seating; state.whereabouts=whereCurrent||whereToday||{}; state.leaves=leaves||{}; state.history=history||{}; state.management=management||{}; state.dutyOps=normalizeDutyOps(dutyOps); state.autoArchive=autoArchive !== false; els.autoArchive.checked=state.autoArchive;
