@@ -318,16 +318,70 @@ async function exportAttendanceHistory() {
   const csv = `\ufeff${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}`;
   await shareOrDownload(new File([csv], `whereabouts-history-${TODAY}.csv`, { type: "text/csv;charset=utf-8" }));
 }
-async function exportTodayForDuty() {
-  const payload = {
-    version: "2026-09-17",
-    className: state.studentsPack?.className || "班级",
-    date: TODAY,
-    generatedAt: new Date().toISOString(),
-    records: currentRecords(),
-  };
-  await exportJS("FIND_PERSON_WHEREABOUTS_DATA", payload, `whereabouts-${TODAY}.js`);
+const presenceDialog=document.getElementById("presenceSendDialog");
+const presenceFile=document.getElementById("presenceConnection");
+const presenceMessage=document.getElementById("presenceMessage");
+const presenceSend=document.getElementById("presenceSend");
+const presenceKey="find-person-presence-manager-v1";
+function teacherConnection(value){
+  if(value?.schema!=="duty-cloud-connection-v1"||value.role!=="manager"||!/^[A-Za-z0-9_-]{43,128}$/.test(value.token||""))throw Error("请选择教师管理连接文件");
+  const url=new URL(value.url);
+  if(url.protocol!=="https:"||url.username||url.password||url.search||url.hash||!url.pathname.endsWith("/duty-sync"))throw Error("教师连接地址无效");
+  return {schema:value.schema,role:value.role,url:url.href,token:value.token};
 }
+function presenceConnection(){
+  try{return teacherConnection(JSON.parse(localStorage.getItem(presenceKey)));}catch{return null;}
+}
+function todayPresence(){
+  const records=currentRecords();
+  return {date:localDateKey(),total:records.length,absent:records.filter(r=>r.status!=="在班").map(r=>r.name)};
+}
+function refreshPresence(message){
+  const {date,total,absent}=todayPresence();
+  document.getElementById("presenceSummary").textContent=date+" · 在册 "+total+" 人 · 非在班 "+absent.length+" 人";
+  const connected=!!presenceConnection();
+  presenceMessage.textContent=message||(connected?"将发送人数和非在班名单。":"首次使用，请导入值日 App 的教师管理连接文件。");
+  presenceSend.disabled=!connected||!total;
+}
+async function openPresenceSend(){
+  await handleDayChange();
+  refreshPresence();
+  presenceDialog.showModal();
+}
+document.getElementById("presenceChoose").onclick=()=>presenceFile.click();
+presenceFile.onchange=async()=>{
+  const file=presenceFile.files[0];if(!file)return;
+  try{
+    if(file.size>10000)throw Error("请选择教师管理连接 JSON");
+    const connection=teacherConnection(JSON.parse(await file.text()));
+    localStorage.setItem(presenceKey,JSON.stringify(connection));refreshPresence("教师连接已就绪");
+  }catch(e){refreshPresence(e.message);}finally{presenceFile.value="";}
+};
+let presenceSending=false;
+presenceDialog.addEventListener("cancel",e=>{if(presenceSending)e.preventDefault();});
+presenceSend.onclick=async()=>{
+  if(presenceSending)return;
+  const connection=presenceConnection(),snapshot=todayPresence();
+  if(!connection||!snapshot.total)return refreshPresence();
+  presenceSending=true;
+  const controls=[...presenceDialog.querySelectorAll("button")];
+  controls.forEach(b=>b.disabled=true);
+  presenceMessage.textContent="正在发送…";
+  async function request(data){
+    const control=new AbortController(),timer=setTimeout(()=>control.abort(),15000);
+    try{
+      const res=await fetch(connection.url,{method:"POST",credentials:"omit",redirect:"error",cache:"no-store",referrerPolicy:"no-referrer",headers:{"Content-Type":"text/plain;charset=UTF-8"},signal:control.signal,body:JSON.stringify({...data,token:connection.token})});
+      const result=await res.json();if(!res.ok||!result.ok)throw Error(result.error||"云端请求失败");return result;
+    }finally{clearTimeout(timer);}
+  }
+  try{
+    const prior=await request({action:"presence-read",date:snapshot.date});
+    if(JSON.stringify(snapshot)!==JSON.stringify(todayPresence()))throw Error("名单或日期已变化，请重新核对后发送");
+    await request({action:"presence-send",...snapshot,expectedRevision:prior.revision});
+    presenceDialog.close();toast(snapshot.date+" 去向已发送");
+  }catch(e){presenceMessage.textContent=e.name==="AbortError"?"连接超时，请重试":e.message;}
+  finally{presenceSending=false;controls.forEach(b=>b.disabled=false);}
+};
 function profileFor(name) {
   const profile = state.management[name] || {};
   const attendanceStability = ["normal","unstable","long_absent"].includes(profile.attendanceStability) ? profile.attendanceStability : "normal";
@@ -838,7 +892,7 @@ els.resetWhere.addEventListener("click", async () => {
 els.saveToday.addEventListener("click", () => saveDailySnapshot("手动保存", true));
 els.openHistory.addEventListener("click", () => { renderHistoryDialog(TODAY); els.historyDialog.showModal(); });
 els.historyDay.addEventListener("change", () => renderHistoryDialog(els.historyDay.value));
-els.exportTodayDuty.addEventListener("click", exportTodayForDuty);
+els.exportTodayDuty.addEventListener("click", openPresenceSend);
 els.exportHistory.addEventListener("click", exportAttendanceHistory); els.historyExport.addEventListener("click", exportAttendanceHistory);
 els.autoArchive.addEventListener("change", async () => {
   state.autoArchive = els.autoArchive.checked; await dbSet("attendance-auto", state.autoArchive);
