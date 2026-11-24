@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="styles.css?v=20261020-calendar1">
+  <link rel="stylesheet" href="styles.css?v=20261124-presence2">
 </head>
 <body>
   <header class="topbar">
@@ -96,7 +96,7 @@
         <section class="archive-card">
           <label class="archive-toggle"><span><strong>自动留存每日统计</strong><small>状态跨日延续，直到你主动修改</small></span><input id="autoArchive" type="checkbox" checked><i aria-hidden="true"></i></label>
           <p id="archiveStatus">正在读取留存记录…</p>
-          <div class="archive-actions"><button id="saveToday" class="secondary-button" type="button">保存今日</button><button id="openHistory" class="secondary-button" type="button">日后回溯</button><button id="exportTodayDuty" class="secondary-button" type="button">☁️ 发送今日去向</button><button id="copyWhereSummary" class="secondary-button" type="button">复制今日去向</button><button id="exportHistory" class="primary-button" type="button">导出全部记录</button></div>
+          <div class="archive-actions"><button id="saveToday" class="secondary-button" type="button">保存今日</button><button id="openHistory" class="secondary-button" type="button">日后回溯</button><button id="exportTodayDuty" class="secondary-button" type="button">☁️ 发送今日去向</button><button id="copyWhereSummary" class="secondary-button" type="button">复制今日去向</button><button id="getPresenceCloud" class="primary-button" type="button">☁️ 获取云端去向</button><button id="exportHistory" class="primary-button" type="button">导出全部记录</button></div>
         </section>
         <div id="whereSummary" class="where-summary"></div>
         <div id="whereGroups" class="where-groups"></div>
@@ -143,6 +143,18 @@
       <input id="presenceConnection" type="file" accept=".json,application/json" hidden>
       <button type="button" id="presenceChoose" class="secondary-button">选择教师连接文件</button>
       <button type="button" id="presenceSend" class="primary-button">发送至服务器</button>
+    </form>
+  </dialog>
+
+  <dialog id="presenceReadDialog" class="data-dialog">
+    <form method="dialog">
+      <div class="dialog-head"><h2>获取云端去向</h2><button value="cancel" aria-label="关闭">×</button></div>
+      <p id="presenceReadMessage" role="status"></p>
+      <p id="presenceReadPreview" style="white-space:pre-wrap"></p>
+      <p class="fineprint">云端只保存人数和非在班名单。应用后，名单外恢复在班；名单内保留本机已有去向，没有具体去向则标为待确认。原有每日记录保留。</p>
+      <button type="button" id="presenceReadChoose" class="secondary-button">选择教师连接文件</button>
+      <button type="button" id="presenceReadFetch" class="secondary-button">重新获取</button>
+      <button type="button" id="presenceReadApply" class="primary-button" disabled>应用到今日</button>
     </form>
   </dialog>
 
@@ -231,7 +243,7 @@
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=20261118-presence1" defer></script>
+  <script src="app.js?v=20261124-presence2" defer></script>
   <script src="duty-readonly.js?v=20261020-calendar1" defer></script>
   <script src="seating-readonly.js?v=20261102-seating-manual2" defer></script>
 </body>

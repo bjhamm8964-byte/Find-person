@@ -208,7 +208,7 @@ main { max-width: 920px; margin: 0 auto; padding: 12px 0 calc(36px + env(safe-ar
 .archive-toggle input:checked + i::after { transform: translateX(19px); }
 .archive-card > p { margin: 12px 0; color: var(--muted); font-size: 11px; }
 .archive-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.archive-actions .primary-button { grid-column: 1 / -1; min-height: 44px; }
+.archive-actions .primary-button { min-height: 44px; padding: 0 10px; }
 .archive-actions .secondary-button { min-height: 42px; padding: 0 10px; font-size: 13px; }
 .where-head-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
 .where-head-actions .text-button { padding: 5px 0; font-size: 12px; }

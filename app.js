@@ -354,8 +354,64 @@ presenceFile.onchange=async()=>{
   try{
     if(file.size>10000)throw Error("请选择教师管理连接 JSON");
     const connection=teacherConnection(JSON.parse(await file.text()));
-    localStorage.setItem(presenceKey,JSON.stringify(connection));refreshPresence("教师连接已就绪");
-  }catch(e){refreshPresence(e.message);}finally{presenceFile.value="";}
+    localStorage.setItem(presenceKey,JSON.stringify(connection));refreshPresence("教师连接已就绪");if(presenceReadDialog.open)fetchCloudPresence();
+  }catch(e){refreshPresence(e.message);if(presenceReadDialog.open)presenceReadMessage.textContent=e.message;}finally{presenceFile.value="";}
+};
+async function presenceRequest(connection,data){
+  const control=new AbortController(),timer=setTimeout(()=>control.abort(),15000);
+  try{
+    const res=await fetch(connection.url,{method:"POST",credentials:"omit",redirect:"error",cache:"no-store",referrerPolicy:"no-referrer",headers:{"Content-Type":"text/plain;charset=UTF-8"},signal:control.signal,body:JSON.stringify({...data,token:connection.token})});
+    const result=await res.json();if(!res.ok||!result.ok)throw Error(result.error||"云端请求失败");return result;
+  }finally{clearTimeout(timer);}
+}
+const presenceReadDialog=$("presenceReadDialog"),presenceReadMessage=$("presenceReadMessage"),presenceReadApply=$("presenceReadApply");
+let presencePreview=null,presenceReadBusy=false;
+function validateCloudPresence(value){
+  const names=new Set(activeStudents().map(s=>s.name));
+  if(!value||value.date!==TODAY||!Number.isInteger(value.total)||value.total!==names.size||!Array.isArray(value.absent)||value.absent.length>value.total||new Set(value.absent).size!==value.absent.length||value.absent.some(n=>typeof n!=="string"||!names.has(n)))throw Error("云端日期、人数或名单与本机不符，请先核对学生总库");
+  return value;
+}
+async function fetchCloudPresence(){
+  if(presenceReadBusy)return;
+  presencePreview=null;presenceReadApply.disabled=true;$("presenceReadPreview").textContent="";
+  await handleDayChange();
+  const connection=presenceConnection(),date=TODAY;
+  if(!connection){presenceReadMessage.textContent="首次使用，请选择值日 App 的教师管理连接文件。";return;}
+  presenceReadBusy=true;$("presenceReadFetch").disabled=true;presenceReadMessage.textContent="正在获取今日云端去向…";
+  try{
+    const result=await presenceRequest(connection,{action:"presence-read",date});
+    if(!presenceReadDialog.open||date!==localDateKey()||JSON.stringify(connection)!==JSON.stringify(presenceConnection()))return;
+    if(!result.presence){presenceReadMessage.textContent="云端还没有今日去向，请先从其他设备发送。";return;}
+    const value=validateCloudPresence(result.presence);
+    presencePreview={value,connection,original:JSON.stringify(currentRecords())};
+    $("presenceReadPreview").textContent=value.date+" · 在册 "+value.total+" 人 · 在班 "+(value.total-value.absent.length)+" 人\n非在班："+(value.absent.join("、")||"无");
+    presenceReadMessage.textContent="已获取今日云端去向，核对后可应用。";presenceReadApply.disabled=false;
+  }catch(e){presenceReadMessage.textContent=e.name==="AbortError"?"连接超时，请重试":e.message;}
+  finally{presenceReadBusy=false;$("presenceReadFetch").disabled=false;}
+}
+$("getPresenceCloud").onclick=()=>{presenceReadDialog.showModal();fetchCloudPresence();};
+$("presenceReadFetch").onclick=fetchCloudPresence;
+$("presenceReadChoose").onclick=()=>presenceFile.click();
+presenceReadApply.onclick=async()=>{
+  if(!presencePreview||presenceReadBusy)return;
+  const preview=presencePreview;
+  presenceReadApply.disabled=true;
+  try{
+    await handleDayChange();
+    validateCloudPresence(preview.value);
+    if(preview.value.date!==localDateKey()||preview.original!==JSON.stringify(currentRecords())||JSON.stringify(preview.connection)!==JSON.stringify(presenceConnection()))throw Error("本机名单、去向或日期已变化，请重新获取");
+    const absent=new Set(preview.value.absent),at=new Date().toISOString();
+    const entry=state.history[TODAY]||{date:TODAY,events:[]};entry.events=Array.isArray(entry.events)?entry.events:[];
+    for(const record of currentRecords()){
+      const status=absent.has(record.name)?(record.status==="在班"?"待确认":record.status):"在班";
+      if(status===record.status)continue;
+      entry.events.push({at,name:record.name,from:record.status,to:status,note:"获取云端去向",leaveUntil:""});
+      delete state.leaves[record.name];
+      state.whereabouts[record.name]={status,note:"",updatedAt:at};
+    }
+    state.history[TODAY]=entry;await persistCurrentState();await saveDailySnapshot("获取云端去向");
+    presencePreview=null;presenceReadDialog.close();renderAll();toast("今日云端去向已应用");
+  }catch(e){presenceReadMessage.textContent=e.message;}
 };
 let presenceSending=false;
 presenceDialog.addEventListener("cancel",e=>{if(presenceSending)e.preventDefault();});
@@ -367,17 +423,10 @@ presenceSend.onclick=async()=>{
   const controls=[...presenceDialog.querySelectorAll("button")];
   controls.forEach(b=>b.disabled=true);
   presenceMessage.textContent="正在发送…";
-  async function request(data){
-    const control=new AbortController(),timer=setTimeout(()=>control.abort(),15000);
-    try{
-      const res=await fetch(connection.url,{method:"POST",credentials:"omit",redirect:"error",cache:"no-store",referrerPolicy:"no-referrer",headers:{"Content-Type":"text/plain;charset=UTF-8"},signal:control.signal,body:JSON.stringify({...data,token:connection.token})});
-      const result=await res.json();if(!res.ok||!result.ok)throw Error(result.error||"云端请求失败");return result;
-    }finally{clearTimeout(timer);}
-  }
   try{
-    const prior=await request({action:"presence-read",date:snapshot.date});
+    const prior=await presenceRequest(connection,{action:"presence-read",date:snapshot.date});
     if(JSON.stringify(snapshot)!==JSON.stringify(todayPresence()))throw Error("名单或日期已变化，请重新核对后发送");
-    await request({action:"presence-send",...snapshot,expectedRevision:prior.revision});
+    await presenceRequest(connection,{action:"presence-send",...snapshot,expectedRevision:prior.revision});
     presenceDialog.close();toast(snapshot.date+" 去向已发送");
   }catch(e){presenceMessage.textContent=e.name==="AbortError"?"连接超时，请重试":e.message;}
   finally{presenceSending=false;controls.forEach(b=>b.disabled=false);}
