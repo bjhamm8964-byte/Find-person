@@ -368,8 +368,18 @@ const presenceReadDialog=$("presenceReadDialog"),presenceReadMessage=$("presence
 let presencePreview=null,presenceReadBusy=false;
 function validateCloudPresence(value){
   const names=new Set(activeStudents().map(s=>s.name));
-  if(!value||value.date!==TODAY||!Number.isInteger(value.total)||value.total!==names.size||!Array.isArray(value.absent)||value.absent.length>value.total||new Set(value.absent).size!==value.absent.length||value.absent.some(n=>typeof n!=="string"||!names.has(n)))throw Error("云端日期、人数或名单与本机不符，请先核对学生总库");
+  if(!value||!Number.isInteger(value.total)||value.total!==names.size||!Array.isArray(value.absent)||value.absent.length>value.total||new Set(value.absent).size!==value.absent.length||value.absent.some(n=>typeof n!=="string"||!names.has(n)))throw Error("云端人数或名单与本机不符，请先核对学生总库");
   return value;
+}
+function latestCloudPresence(result){
+  if(result.text===null)return null;
+  if(typeof result.text!=="string")throw Error("云端去向格式无效");
+  const match=result.text.match(/本班在册人数(\d+)人，今日实到人数(\d+)人，请假(\d+)人，请假人员：([^\n]*)。$/u);
+  if(!match)throw Error("云端去向格式无效");
+  const total=Number(match[1]),present=Number(match[2]),count=Number(match[3]);
+  const absent=match[4]==="无"?[]:match[4].split("、");
+  if(total-present!==count||absent.length!==count)throw Error("云端去向人数与名单不一致");
+  return {date:result.date,total,absent};
 }
 async function fetchCloudPresence(){
   if(presenceReadBusy)return;
@@ -377,15 +387,16 @@ async function fetchCloudPresence(){
   await handleDayChange();
   const connection=presenceConnection(),date=TODAY;
   if(!connection){presenceReadMessage.textContent="首次使用，请选择值日 App 的教师管理连接文件。";return;}
-  presenceReadBusy=true;$("presenceReadFetch").disabled=true;presenceReadMessage.textContent="正在获取今日云端去向…";
+  presenceReadBusy=true;$("presenceReadFetch").disabled=true;presenceReadMessage.textContent="正在获取云端最近保存的去向…";
   try{
-    const result=await presenceRequest(connection,{action:"presence-read",date});
+    const result=await presenceRequest(connection,{action:"presence-latest"});
     if(!presenceReadDialog.open||date!==localDateKey()||JSON.stringify(connection)!==JSON.stringify(presenceConnection()))return;
-    if(!result.presence){presenceReadMessage.textContent="云端还没有今日去向，请先从其他设备发送。";return;}
-    const value=validateCloudPresence(result.presence);
-    presencePreview={value,connection,original:JSON.stringify(currentRecords())};
+    const latest=latestCloudPresence(result);
+    if(!latest){presenceReadMessage.textContent="云端还没有保存的去向，请先从其他设备发送。";return;}
+    const value=validateCloudPresence(latest);
+    presencePreview={value,connection,localDate:date,original:JSON.stringify(currentRecords())};
     $("presenceReadPreview").textContent=value.date+" · 在册 "+value.total+" 人 · 在班 "+(value.total-value.absent.length)+" 人\n非在班："+(value.absent.join("、")||"无");
-    presenceReadMessage.textContent="已获取今日云端去向，核对后可应用。";presenceReadApply.disabled=false;
+    presenceReadMessage.textContent="已获取云端最近保存的去向，可应用到今日。";presenceReadApply.disabled=false;
   }catch(e){presenceReadMessage.textContent=e.name==="AbortError"?"连接超时，请重试":e.message;}
   finally{presenceReadBusy=false;$("presenceReadFetch").disabled=false;}
 }
@@ -399,7 +410,7 @@ presenceReadApply.onclick=async()=>{
   try{
     await handleDayChange();
     validateCloudPresence(preview.value);
-    if(preview.value.date!==localDateKey()||preview.original!==JSON.stringify(currentRecords())||JSON.stringify(preview.connection)!==JSON.stringify(presenceConnection()))throw Error("本机名单、去向或日期已变化，请重新获取");
+    if(preview.localDate!==localDateKey()||preview.original!==JSON.stringify(currentRecords())||JSON.stringify(preview.connection)!==JSON.stringify(presenceConnection()))throw Error("本机名单、去向或日期已变化，请重新获取");
     const absent=new Set(preview.value.absent),at=new Date().toISOString();
     const entry=state.history[TODAY]||{date:TODAY,events:[]};entry.events=Array.isArray(entry.events)?entry.events:[];
     for(const record of currentRecords()){
